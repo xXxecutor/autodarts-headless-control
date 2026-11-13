@@ -130,6 +130,76 @@ svg.icon {
     color: #fff;
 }
 
+/* Gerätesteuerung als Symbolleiste in der Kopfzeile */
+.header-tools {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.toolbar {
+    display: flex;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 13px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+}
+
+.tool-btn {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+}
+
+.tool-btn svg.icon { width: 19px; height: 19px; }
+
+.tool-btn.warn { color: #fbbf24; }
+.tool-btn.warn:hover { background: rgba(245, 158, 11, 0.18); color: #fde68a; }
+.tool-btn.danger { color: #f87171; }
+.tool-btn.danger:hover { background: rgba(239, 68, 68, 0.2); color: #fecaca; }
+
+.tool-btn:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 1px;
+}
+
+/* Eigener Tooltip, da "title" auf Touch-Geräten nicht erscheint */
+.tool-btn[data-tip] { position: relative; }
+
+.tool-btn[data-tip]::after {
+    content: attr(data-tip);
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 5px 9px;
+    border-radius: 8px;
+    background: #1e293b;
+    border: 1px solid var(--border-strong);
+    color: var(--text);
+    font-size: 12.5px;
+    font-weight: 500;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .12s;
+    z-index: 10;
+}
+
+.tool-btn[data-tip]:hover::after,
+.tool-btn[data-tip]:focus-visible::after { opacity: 1; }
+
+.toolbar .tool-btn:last-child[data-tip]::after { left: auto; right: 0; transform: none; }
+
 /* Hotspot-Hinweis */
 .banner {
     display: none;
@@ -184,18 +254,17 @@ svg.icon {
     display: grid;
     gap: 20px;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "board" "notes" "steps" "device";
+    grid-template-areas: "board" "notes" "steps";
 }
 
 .area-board  { grid-area: board; }
-.area-device { grid-area: device; }
 .area-notes  { grid-area: notes; }
 .area-steps  { grid-area: steps; }
 
 @media (min-width: 880px) {
     .layout {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        grid-template-areas: "board device" "notes notes" "steps steps";
+        grid-template-areas: "board steps" "notes notes";
     }
 }
 
@@ -303,7 +372,6 @@ svg.icon {
 }
 
 .btn:focus-visible,
-.tile:focus-visible,
 .banner:focus-visible,
 .link-btn:focus-visible {
     outline: 2px solid #60a5fa;
@@ -419,29 +487,32 @@ svg.icon {
     list-style: none;
     margin: 0;
     padding: 0;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
     counter-reset: step;
 }
 
 .steps li {
     counter-increment: step;
-    padding: 16px;
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    column-gap: 14px;
+    align-content: center;
+    padding: 12px 16px;
     border-radius: var(--radius-sm);
     background: var(--surface-2);
     border: 1px solid var(--border);
-    font-size: 14px;
+    font-size: 13px;
+    line-height: 1.4;
     color: var(--muted);
 }
 
 .steps li::before {
     content: counter(step);
+    grid-row: span 2;
+    align-self: center;
     display: grid;
     place-items: center;
     width: 28px;
     height: 28px;
-    margin-bottom: 10px;
     border-radius: 9px;
     background: rgba(59, 130, 246, 0.16);
     border: 1px solid rgba(96, 165, 250, 0.35);
@@ -452,36 +523,10 @@ svg.icon {
 
 .steps strong {
     display: block;
-    margin-bottom: 2px;
+    margin-bottom: 1px;
     color: var(--text);
-    font-size: 14.5px;
+    font-size: 15px;
 }
-
-/* Gerätesteuerung */
-.tile {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 12px 16px;
-    border-radius: var(--radius-sm);
-    border: 1px solid;
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-    transition: background .15s, border-color .15s, transform .1s;
-}
-
-.tile:active { transform: scale(0.985); }
-
-.tile svg.icon { width: 24px; height: 24px; }
-
-.tile strong { display: block; font-size: 15px; color: var(--text); }
-.tile span { display: block; margin-top: 1px; font-size: 13px; color: var(--muted); }
-
-.tile-warn { background: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.3); color: #fbbf24; }
-.tile-warn:hover { background: rgba(245, 158, 11, 0.16); border-color: rgba(245, 158, 11, 0.55); }
-.tile-danger { background: rgba(239, 68, 68, 0.09); border-color: rgba(248, 113, 113, 0.32); color: #f87171; }
-.tile-danger:hover { background: rgba(239, 68, 68, 0.18); border-color: rgba(248, 113, 113, 0.6); }
 
 .footer {
     text-align: center;
@@ -844,18 +889,18 @@ svg.icon {
     .page { padding: 18px 16px 32px; gap: 16px; }
     .card { padding: 20px 18px; }
     .rows { gap: 10px; grid-auto-rows: minmax(64px, auto); }
-    .steps { grid-template-columns: 1fr; }
-    .steps li { display: grid; grid-template-columns: 28px 1fr; column-gap: 12px; padding: 14px; }
-    .steps li::before { margin: 0; grid-row: span 2; }
 }
 
-@media (max-width: 480px) {
-    .brand h1 { font-size: 19px; }
-    .brand p { display: none; }
-    .logo { width: 42px; height: 42px; border-radius: 13px; }
-    .logo svg { width: 26px; height: 26px; }
+@media (max-width: 560px) {
+    .brand { gap: 10px; }
+    .brand h1 { font-size: 18px; }
+    .brand p, .title-rest { display: none; }
+    .logo { width: 40px; height: 40px; border-radius: 12px; }
+    .logo svg { width: 25px; height: 25px; }
+    .header-tools { gap: 6px; }
     .link-btn .label { display: none; }
-    .link-btn { padding: 10px; }
+    .link-btn { padding: 9px; border-radius: 12px; }
+    .tool-btn { width: 36px; }
     .banner .banner-cta { display: none; }
 }
 
@@ -875,6 +920,7 @@ svg.icon {
         <symbol id="i-external" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3"/></symbol>
         <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
         <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8M21 3v5h-5"/></symbol>
+        <symbol id="i-board-restart" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8M21 3v5h-5"/><circle cx="12" cy="12" r="3.5"/></symbol>
         <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 15.36-6.36L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.36 6.36L3 16M3 21v-5h5"/></symbol>
         <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 2v10M18.36 6.64a9 9 0 1 1-12.73 0"/></symbol>
         <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"/></symbol>
@@ -901,14 +947,28 @@ svg.icon {
                 </svg>
             </div>
             <div>
-                <h1>Autodarts-Steuerung</h1>
+                <h1>Autodarts<span class="title-rest">-Steuerung</span></h1>
                 <p>Dein Dartboard auf einen Blick</p>
             </div>
         </div>
-        <a href="/admin" class="link-btn" title="Admin / Netzwerk">
-            <svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg>
-            <span class="label">Admin / Netzwerk</span>
-        </a>
+        <div class="header-tools">
+            <!-- Gerätesteuerung: jede Aktion fragt vorher nach -->
+            <div class="toolbar" role="group" aria-label="Gerät">
+                <button type="button" class="tool-btn warn" data-tip="Autodarts neu starten" aria-label="Autodarts neu starten" onclick="showDialog('autodartsRestartOverlay')">
+                    <svg class="icon" aria-hidden="true"><use href="#i-board-restart"/></svg>
+                </button>
+                <button type="button" class="tool-btn warn" data-tip="System neu starten" aria-label="System neu starten" onclick="showDialog('restartOverlay')">
+                    <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>
+                </button>
+                <button type="button" class="tool-btn danger" data-tip="Herunterfahren" aria-label="Herunterfahren" onclick="showDialog('shutdownOverlay')">
+                    <svg class="icon" aria-hidden="true"><use href="#i-power"/></svg>
+                </button>
+            </div>
+            <a href="/admin" class="link-btn" title="Admin / Netzwerk" aria-label="Admin / Netzwerk">
+                <svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg>
+                <span class="label">Admin</span>
+            </a>
+        </div>
     </header>
 
     <!-- Hotspot-Hinweis (nur im Einrichtungs-Hotspot) -->
@@ -950,26 +1010,17 @@ svg.icon {
         </div>
     </section>
 
-    <!-- Gerät -->
-    <section class="card panel area-device" aria-labelledby="deviceHeading">
+    <!-- Erste Einrichtung (steht im breiten Format den drei Board-Zeilen gegenüber) -->
+    <section class="card panel area-steps" aria-labelledby="stepsHeading">
         <div class="card-head">
-            <h2 id="deviceHeading">Gerät</h2>
-            <p>Neu starten oder sicher ausschalten.</p>
+            <h2 id="stepsHeading">Erste Einrichtung</h2>
+            <p>Einmalig nötig – danach ist das Board immer spielbereit.</p>
         </div>
-        <div class="rows">
-            <button type="button" class="tile tile-warn" onclick="showDialog('autodartsRestartOverlay')">
-                <svg class="icon" aria-hidden="true"><use href="#i-rotate"/></svg>
-                <div><strong>Autodarts neu starten</strong><span>Nur die Autodarts-Software</span></div>
-            </button>
-            <button type="button" class="tile tile-warn" onclick="showDialog('restartOverlay')">
-                <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>
-                <div><strong>System neu starten</strong><span>Das komplette Gerät</span></div>
-            </button>
-            <button type="button" class="tile tile-danger" onclick="showDialog('shutdownOverlay')">
-                <svg class="icon" aria-hidden="true"><use href="#i-power"/></svg>
-                <div><strong>Herunterfahren</strong><span>Strom erst trennen, wenn „System ist aus“ erscheint</span></div>
-            </button>
-        </div>
+        <ol class="steps rows">
+            <li><strong>Board-Manager öffnen</strong>Über „Board einrichten“ – öffnet sich in einem neuen Tab.</li>
+            <li><strong>Anmelden &amp; kalibrieren</strong>Board mit deinem Autodarts-Konto verbinden, Kameras zuordnen.</li>
+            <li><strong>Loslegen</strong>„Jetzt spielen“ antippen und auf play.autodarts.com ein Spiel starten.</li>
+        </ol>
     </section>
 
     <!-- Hinweise (nur bei Bedarf sichtbar) -->
@@ -1000,19 +1051,6 @@ svg.icon {
             </div>
         </div>
     </div>
-
-    <!-- Erste Einrichtung -->
-    <section class="card area-steps">
-        <div class="card-head">
-            <h2>Erste Einrichtung</h2>
-            <p>Einmalig nötig – danach ist das Board nach jedem Einschalten spielbereit.</p>
-        </div>
-        <ol class="steps">
-            <li><strong>Board-Manager öffnen</strong>Über „Board einrichten“ – er öffnet sich in einem neuen Tab.</li>
-            <li><strong>Board anmelden &amp; kalibrieren</strong>Mit deinem Autodarts-Konto verbinden, Kameras zuordnen und kalibrieren.</li>
-            <li><strong>Loslegen</strong>Auf „Jetzt spielen“ tippen und auf play.autodarts.com ein Spiel starten.</li>
-        </ol>
-    </section>
 
     </main>
 
@@ -1100,7 +1138,7 @@ svg.icon {
 <!-- Autodarts neu starten -->
 <div class="overlay" id="autodartsRestartOverlay">
     <div class="dialog" role="dialog" aria-modal="true">
-        <div class="dialog-icon warn"><svg class="icon" aria-hidden="true"><use href="#i-rotate"/></svg></div>
+        <div class="dialog-icon warn"><svg class="icon" aria-hidden="true"><use href="#i-board-restart"/></svg></div>
         <h2>Autodarts neu starten?</h2>
         <p>Nur die Autodarts-Software wird neu gestartet. Das ist nach wenigen Sekunden erledigt, das Gerät bleibt an.</p>
         <div class="dialog-buttons">
@@ -1128,7 +1166,7 @@ svg.icon {
     <div class="dialog" role="dialog" aria-modal="true">
         <div class="dialog-icon danger"><svg class="icon" aria-hidden="true"><use href="#i-power"/></svg></div>
         <h2>System herunterfahren?</h2>
-        <p>Das Gerät wird sicher ausgeschaltet. Sobald „System ist aus“ erscheint, kann der Strom getrennt werden.</p>
+        <p>Das Gerät wird sicher ausgeschaltet. Den Strom erst trennen, wenn „System ist aus“ erscheint – sonst können Daten beschädigt werden.</p>
         <div class="dialog-buttons">
             <button type="button" class="btn btn-ghost" onclick="hideDialog('shutdownOverlay')">Abbrechen</button>
             <button type="button" class="btn btn-danger" onclick="shutdownSystem()">Herunterfahren</button>
