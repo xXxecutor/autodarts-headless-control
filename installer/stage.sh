@@ -27,7 +27,7 @@ stage_files() {
 
     # Anwendung
     cp -r "${project}/app" "${app_dir}/"
-    cp "${project}/pyproject.toml" "${project}/README.md" "${app_dir}/"
+    cp "${project}/pyproject.toml" "${project}/README.md" "${project}/LICENSE.md" "${app_dir}/"
     install -m 0755 "${project}/installer/setup.sh"           "${app_dir}/installer/setup.sh"
     install -m 0755 "${project}/installer/self-update.sh"     "${app_dir}/installer/self-update.sh"
     install -m 0755 "${project}/installer/migrate-network.py" "${app_dir}/installer/migrate-network.py"

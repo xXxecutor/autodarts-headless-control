@@ -209,3 +209,16 @@ git push origin v1.1.0
 ```
 
 Der Release-Workflow testet, baut `.deb`, Quellarchiv und `install.sh` und veröffentlicht sie als GitHub-Release (die Version kommt allein aus dem Tag). Alle installierten Geräte übernehmen die neue Version innerhalb eines Tages automatisch. Tags mit Bindestrich (z. B. `v1.1.0-beta1`) werden als Vorabversion veröffentlicht und nicht automatisch verteilt.
+
+## Lizenz
+
+Autodarts Headless Control steht unter der [PolyForm Noncommercial License 1.0.0](LICENSE.md).
+
+- ✅ Nutzen, forken, anpassen und weitergeben – privat, im Verein, in Schulen und anderen nicht kommerziellen Einrichtungen
+- ✅ Eigene Varianten veröffentlichen, solange sie ebenfalls nicht kommerziell genutzt werden
+- ❌ Kommerzielle Nutzung (z. B. Verkauf, Einbau in kommerzielle Produkte oder bezahlte Dienstleistungen)
+- 📌 Bei Weitergabe die Lizenz und die Zeile `Required Notice: …` aus [`LICENSE.md`](LICENSE.md) beibehalten – so bleibt die Herkunft erkennbar
+
+Für eine kommerzielle Nutzung bitte vorher über ein [GitHub-Issue](https://github.com/xXxecutor/autodarts-headless-control/issues) Kontakt aufnehmen.
+
+Mitgelieferte Fremdkomponenten behalten ihre eigene Lizenz: xterm.js steht unter der MIT-Lizenz ([`app/web/xterm.LICENSE`](app/web/xterm.LICENSE)). Autodarts selbst ist nicht Teil dieses Projekts und wird direkt vom Hersteller installiert.
