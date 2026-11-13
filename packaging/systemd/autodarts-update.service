@@ -2,6 +2,8 @@
 Description=Check for Autodarts updates
 After=network-online.target
 Wants=network-online.target
+# In der Weboberfläche abgeschaltet (Admin > System > Automatische Updates)
+ConditionPathExists=!/var/lib/autodarts-headless-control/auto-update-disabled
 
 [Service]
 Type=oneshot

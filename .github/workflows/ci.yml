@@ -254,8 +254,28 @@ jobs:
           curl -fsS "http://127.0.0.1:${PORT:-80}/api/autodarts"
           echo
 
-      - name: Selbst-Update (ohne veröffentlichtes Release nichts zu tun)
-        run: sudo /opt/autodarts-headless-control/installer/self-update.sh --check
+      - name: Automatische Updates über die Weboberfläche ab- und wieder einschalten
+        run: |
+          set -x
+          B="http://127.0.0.1:${PORT:-80}"
+          FLAG=/var/lib/autodarts-headless-control/auto-update-disabled
+          curl -fsS -X POST -H 'Content-Type: application/json' -d '{"enabled":false}' "$B/api/system/auto-update"
+          echo
+          sudo test -e "$FLAG"
+          # Abgeschaltet: Beide Update-Dienste dürfen gar nicht erst laufen.
+          sudo systemctl start autodarts-headless-control-update.service autodarts-update.service
+          systemctl show -p ConditionResult autodarts-headless-control-update.service | grep -qx 'ConditionResult=no'
+          systemctl show -p ConditionResult autodarts-update.service | grep -qx 'ConditionResult=no'
+          curl -fsS -X POST -H 'Content-Type: application/json' -d '{"enabled":true}' "$B/api/system/auto-update"
+          echo
+          sudo test ! -e "$FLAG"
+          curl -fsS "$B/api/system" | grep -q '"auto_update": true'
+
+      - name: Selbst-Update prüfen (0 = aktuell, 10 = neuere Version verfügbar)
+        run: |
+          rc=0
+          sudo /opt/autodarts-headless-control/installer/self-update.sh --check || rc=$?
+          test "$rc" = 0 || test "$rc" = 10
 
       - name: Protokolle bei Fehlern
         if: failure()

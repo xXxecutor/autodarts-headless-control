@@ -384,7 +384,8 @@
 
 /* Mobil */
 @media (max-width: 720px) {
-    .rows { gap: 10px; grid-auto-rows: minmax(64px, auto); }
+    /* 1fr: alle Zeilen so hoch wie die höchste, auch wenn Text umbricht */
+    .rows { gap: 10px; grid-auto-rows: minmax(64px, 1fr); }
 }
 
 @media (max-width: 560px) {

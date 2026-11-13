@@ -3,8 +3,9 @@
 #
 # Prüft, ob auf GitHub eine neuere Version veröffentlicht wurde, und installiert
 # sie mit dem Installer genau dieser Version. Läuft täglich über
-# autodarts-headless-control-update.timer; abschaltbar mit
-# HEADLESS_AUTO_UPDATE=0 in /etc/autodarts-headless-control.env.
+# autodarts-headless-control-update.timer. Abschalten: in der Admin-Seite
+# (System > Automatische Updates; der Timer startet dann gar nicht erst) oder
+# fest mit HEADLESS_AUTO_UPDATE=0 in /etc/autodarts-headless-control.env.
 #
 #   self-update.sh           prüfen und ggf. aktualisieren
 #   self-update.sh --check   nur prüfen (Rückgabe 0 = aktuell, 10 = Update verfügbar)

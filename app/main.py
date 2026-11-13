@@ -22,6 +22,7 @@ from app.services.autodarts import (
 )
 from app.services.system import reboot_system, shutdown_system, get_system_logs
 from app.services.system_info import get_system_info
+from app.services.updates import set_auto_update
 from app.services.wifi_manager import WifiManagerService
 from app.services.network_watchdog import NetworkWatchdog
 from app.services.request_origin import is_same_origin
@@ -303,6 +304,16 @@ class RequestHandler(BaseHTTPRequestHandler):
             if not result.get("ok"):
                 result["error"] = result.get("reason", "unknown")
             self._json_response(result, 200 if result.get("ok") else 500)
+            return
+
+        if route == "/api/system/auto-update":
+            enabled = self._parse_json_body().get("enabled")
+            if not isinstance(enabled, bool):
+                self._json_response({"ok": False, "error": "'enabled' muss true oder false sein"}, 400)
+                return
+            result = set_auto_update(enabled)
+            status = 200 if result["ok"] else (409 if result.get("error") == "locked" else 500)
+            self._json_response(result, status)
             return
 
         if route == "/api/system/reboot":

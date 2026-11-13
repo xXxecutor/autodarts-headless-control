@@ -4,6 +4,8 @@ import platform
 import socket
 import sys
 
+from app.services.updates import auto_update_status
+
 
 def get_app_version() -> str | None:
     try:
@@ -16,6 +18,7 @@ def get_app_version() -> str | None:
 
 def get_system_info() -> dict:
     hostname = socket.gethostname()
+    updates = auto_update_status()
 
     # Ports aus derselben Konfiguration wie die Server lesen.
     http_port = int(os.environ.get("HEADLESS_HTTP_PORT", "80"))
@@ -41,5 +44,6 @@ def get_system_info() -> dict:
         "python_version": platform.python_version(),
         "python_executable": sys.executable,
         "version": get_app_version(),
-        "auto_update": os.environ.get("HEADLESS_AUTO_UPDATE", "1") != "0",
+        "auto_update": updates["enabled"],
+        "auto_update_locked": updates["locked"],
     }
