@@ -122,7 +122,8 @@ jobs:
           curl -fs http://127.0.0.1:8080/health >/dev/null || { echo "App startet nicht:"; cat /tmp/app.log; exit 1; }
           echo
           curl -fsS http://127.0.0.1:8080/ | grep -q "Autodarts-Steuerung"
-          curl -fsS http://127.0.0.1:8080/admin | grep -q "Experten-Werkzeuge"
+          curl -fsS http://127.0.0.1:8080/admin | grep -q "Netzwerk, System"
+          curl -fsS http://127.0.0.1:8080/static/ui.css | grep -q -- "--surface"
           curl -fsS http://127.0.0.1:8080/api/system
           echo
           curl -fsS http://127.0.0.1:8080/api/autodarts
