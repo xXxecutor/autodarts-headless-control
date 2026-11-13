@@ -3,972 +3,516 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0b1120">
 <title>Autodarts Admin – Netzwerk &amp; System</title>
 
+<link rel="stylesheet" href="/static/ui.css">
+
 <style>
-* { box-sizing: border-box; }
-
-body {
-    margin: 0;
-    min-height: 100vh;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
-    color: #f8fafc;
-    background:
-        radial-gradient(circle at top left, #1e3a8a 0, transparent 35%),
-        radial-gradient(circle at bottom right, #312e81 0, transparent 35%),
-        linear-gradient(135deg, #020617, #0f172a);
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    padding: 24px 20px 40px;
-}
-
-.container {
-    width: 100%;
-    max-width: 980px;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.settings-card {
-    padding: 24px 26px;
-    border-radius: 20px;
-    background: rgba(15, 23, 42, 0.88);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.35),
-                inset 0 1px 0 rgba(255, 255, 255, 0.04);
-    backdrop-filter: blur(16px);
-}
-
-.page-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 4px 4px 6px;
-    flex-wrap: wrap;
-}
-
-.header-brand {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.page-title {
-    margin: 0;
-    font-size: 26px;
-    font-weight: 700;
-    letter-spacing: normal;
-    color: #f8fafc;
-    text-rendering: optimizeLegibility;
-}
-
-.page-subtitle {
-    margin: 4px 0 0;
-    color: #94a3b8;
-    font-size: 14px;
-}
-
-.btn-back-header {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 18px;
-    border-radius: 12px;
-    background: rgba(30, 41, 59, 0.7);
-    border: 1px solid rgba(148, 163, 184, 0.2);
-    color: #cbd5e1;
-    font-size: 13.5px;
-    font-weight: 500;
-    text-decoration: none;
-    transition: all 0.15s ease;
-}
-
-.btn-back-header:hover {
-    background: rgba(37, 99, 235, 0.2);
-    border-color: rgba(96, 165, 250, 0.4);
-    color: #ffffff;
-}
-
-.section-row-2col {
+/* Raster der Admin-Seite */
+.pair {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 20px;
 }
 
-.settings-card.flex-col {
+.panel {
     display: flex;
     flex-direction: column;
+}
+
+.panel .card-head { flex: 1; }
+
+.card-head.with-action {
+    display: flex;
+    align-items: flex-start;
     justify-content: space-between;
+    gap: 16px;
 }
 
-.section-desc {
-    margin: 0 0 18px;
-    color: #94a3b8;
-    font-size: 13.5px;
-    line-height: 1.6;
-}
+.card-head.with-action > .btn,
+.card-head.with-action > .spinner { flex-shrink: 0; white-space: nowrap; }
 
-.section-desc code {
-    background: rgba(30, 41, 59, 0.8);
-    color: #38bdf8;
-    padding: 2px 6px;
+.card-head code {
+    padding: 1px 6px;
     border-radius: 6px;
+    background: var(--surface-2);
+    color: #7dd3fc;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 12.5px;
-    font-family: inherit;
 }
 
-.card-inner-divider {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin: 22px 0 18px;
-    color: #64748b;
-    font-size: 11.5px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-}
-
-.card-inner-divider::before,
-.card-inner-divider::after {
-    content: "";
-    flex: 1;
-    height: 1px;
-    background: rgba(148, 163, 184, 0.14);
-}
-
-.connect-form-grid {
+/* Kennzahlen */
+.stats {
     display: grid;
-    grid-template-columns: 1fr 1fr auto;
-    gap: 14px;
-    align-items: flex-end;
-}
-
-.connect-btn-col {
-    min-width: 140px;
-}
-
-.logo {
-    width: 52px;
-    height: 52px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #2563eb, #7c3aed);
-    border-radius: 16px;
-    box-shadow: 0 8px 24px rgba(37,99,235,.35);
-    flex-shrink: 0;
-}
-
-.logo svg { width: 30px; height: 30px; }
-
-.section-title {
-    margin: 0 0 14px;
-    font-size: 16px;
-    font-weight: 650;
-    color: #e2e8f0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-/* Netzwerkstatus */
-.status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 14px;
-    border-radius: 999px;
-    font-size: 13px;
-    font-weight: 600;
-}
-
-.status-badge .dot {
-    width: 8px;
-    height: 8px;
-    flex-shrink: 0;
-    border-radius: 50%;
-    background: currentColor;
-    box-shadow: 0 0 6px currentColor, 0 0 12px currentColor;
-}
-
-.status-ethernet {
-    background: rgba(34,197,94,.16);
-    border: 1px solid rgba(74,222,128,.42);
-    color: #4ade80;
-}
-
-.status-wifi {
-    background: rgba(37,99,235,.16);
-    border: 1px solid rgba(96,165,250,.42);
-    color: #60a5fa;
-}
-
-.status-hotspot {
-    background: rgba(251,191,36,.18);
-    border: 1px solid rgba(251,191,36,.42);
-    color: #fbbf24;
-}
-
-.status-error {
-    background: rgba(239,68,68,.16);
-    border: 1px solid rgba(248,113,113,.42);
-    color: #fca5a5;
-}
-
-.status-unknown {
-    background: rgba(148,163,184,.12);
-    border: 1px solid rgba(148,163,184,.25);
-    color: #cbd5e1;
-}
-
-/* Netzwerkliste */
-.network-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    max-height: 280px;
-    overflow-y: auto;
-    scrollbar-gutter: stable;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
-    padding-right: 2px;
-}
-
-.network-list::-webkit-scrollbar {
-    width: 6px;
-}
-
-.network-list::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.network-list::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.35);
-    border-radius: 4px;
-}
-
-.network-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 14px 16px;
-    border-radius: 14px;
-    background: rgba(30,41,59,.6);
-    border: 1px solid rgba(148,163,184,.12);
-    transition: border-color .15s, background .15s;
-}
-
-.network-item:hover {
-    border-color: rgba(96,165,250,.3);
-    background: rgba(37,99,235,.08);
-}
-
-.network-item.connected {
-    border-color: rgba(96,165,250,.5);
-    background: rgba(37,99,235,.10);
-}
-
-.network-info { flex: 1; min-width: 0; }
-
-.network-ssid {
-    font-weight: 600;
-    font-size: 15px;
-    color: #f1f5f9;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.network-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-top: 4px;
-    font-size: 12px;
-    color: #94a3b8;
-}
-
-.network-meta span {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.network-signal {
-    display: flex;
-    gap: 2px;
-    align-items: flex-end;
-    height: 16px;
-}
-
-.signal-bar {
-    width: 4px;
-    background: #475569;
-    border-radius: 1px;
-}
-
-.signal-bar.active { background: #22d3ee; }
-
-.network-actions { flex-shrink: 0; }
-
-.btn-small {
-    min-height: 38px;
-    padding: 0 16px;
-    border: 0;
-    border-radius: 10px;
-    color: white;
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    transition: transform .1s, opacity .15s;
-}
-
-.btn-network-action {
-    width: 124px;
-    min-width: 124px;
-    height: 40px;
-    min-height: 40px;
-    padding: 0 12px;
-    font-size: 13px;
-    font-weight: 600;
-    box-sizing: border-box;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    white-space: nowrap;
-    background: rgba(30, 64, 175, 0.25);
-    border: 1px solid rgba(96, 165, 250, 0.20);
-    color: #dbeafe;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-}
-
-.btn-network-action:hover {
-    background: rgba(30, 64, 175, 0.45);
-    border-color: rgba(96, 165, 250, 0.5);
-    color: #ffffff;
-}
-
-.btn-network-action:active {
-    transform: scale(0.97);
-}
-
-.btn-network-action:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.network-header-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 14px;
-    padding-right: 16px;
-}
-
-.btn-small:hover { opacity: .9; }
-.btn-small:active { transform: scale(.97); }
-.btn-small:disabled { opacity: .5; cursor: not-allowed; }
-
-.btn-primary {
-    background: linear-gradient(135deg, #2563eb, #4f46e5);
-    box-shadow: 0 6px 16px rgba(37,99,235,.25);
-}
-
-.btn-warning {
-    color: #fde68a;
-    background: rgba(120,53,15,.28);
-    border: 1px solid rgba(251,191,36,.20);
-}
-
-.btn-danger {
-    color: #fecaca;
-    background: rgba(127,29,29,.35);
-    border: 1px solid rgba(248,113,113,.22);
-}
-
-.btn-secondary {
-    background: rgba(30,64,175,.25);
-    border: 1px solid rgba(96,165,250,.20);
-    color: #dbeafe;
-}
-
-/* Verbindungsformular */
-.connect-form {
-    display: flex;
-    flex-direction: column;
+    grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr));
     gap: 12px;
 }
 
-.form-row { display: flex; flex-direction: column; gap: 6px; }
-
-.form-label {
-    font-size: 13px;
-    font-weight: 500;
-    color: #cbd5e1;
-}
-
-.form-input {
-    width: 100%;
-    height: 40px;
-    min-height: 40px;
-    padding: 0 14px;
-    box-sizing: border-box;
-    border-radius: 10px;
-    border: 1px solid rgba(148,163,184,.18);
-    background: rgba(15,23,42,.8);
-    color: #f8fafc;
-    font-family: inherit;
-    font-size: 14px;
-    line-height: 38px;
-    transition: border-color .15s, box-shadow .15s;
-}
-
-.form-input:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59,130,246,.15);
-}
-
-.form-input::placeholder { color: #64748b; }
-
-/* Trennlinie */
-.divider {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin: 8px 0 16px;
-    color: #475569;
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: .5px;
-}
-
-.divider::before,
-.divider::after {
-    content: "";
-    flex: 1;
-    height: 1px;
-    background: rgba(148,163,184,.12);
-}
-
-/* Informationsfelder */
-.status-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
-}
-
-.stat-box {
+.stat {
     min-width: 0;
-    padding: 14px;
-    border-radius: 12px;
-    background: rgba(30,41,59,.6);
-    border: 1px solid rgba(148,163,184,.10);
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
 }
 
 .stat-label {
-    font-size: 11px;
-    color: #94a3b8;
-    text-transform: uppercase;
-    letter-spacing: .5px;
-    margin-bottom: 6px;
+    color: var(--muted);
+    font-size: 13px;
 }
 
 .stat-value {
-    font-size: 14px;
+    margin-top: 2px;
+    font-size: 15px;
     font-weight: 600;
-    color: #f1f5f9;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
 }
 
-/* Kompakte Hinweiskästen */
-.info-box {
-    padding: 14px;
-    margin-bottom: 14px;
-    border-radius: 12px;
-    background: rgba(120,53,15,.18);
-    border: 1px solid rgba(251,191,36,.22);
-    color: #fcd34d;
-    font-size: 13px;
-    line-height: 1.5;
+/* Statusplakette */
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid;
+    font-size: 13.5px;
+    font-weight: 600;
 }
 
-.info-box strong {
-    display: block;
-    margin-bottom: 6px;
-    color: #fde68a;
+.pill::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
 }
 
-/* Aktionsbuttons */
-.buttons {
+.pill.ok      { color: #4ade80; background: rgba(34, 197, 94, 0.12); border-color: rgba(34, 197, 94, 0.35); }
+.pill.wifi    { color: #60a5fa; background: rgba(59, 130, 246, 0.12); border-color: rgba(96, 165, 250, 0.35); }
+.pill.warn    { color: #fbbf24; background: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.35); }
+.pill.error   { color: #fca5a5; background: rgba(239, 68, 68, 0.12); border-color: rgba(248, 113, 113, 0.35); }
+.pill.unknown { color: #cbd5e1; background: var(--surface-2); border-color: var(--border-strong); }
+
+/* WLAN-Liste */
+.network-list {
+    max-height: 290px;
+    margin-bottom: 0;
+}
+
+.network-item.connected {
+    border-color: rgba(96, 165, 250, 0.45);
+    background: rgba(37, 99, 235, 0.1);
+    cursor: default;
+}
+
+.connected-label {
+    color: #60a5fa;
+    font-weight: 600;
+}
+
+.or-divider {
     display: flex;
-    flex-direction: column;
-    gap: 14px;
+    align-items: center;
+    gap: 12px;
+    margin: 20px 0 16px;
+    color: var(--subtle);
+    font-size: 13px;
 }
 
-.buttons .btn-small {
-    width: 100%;
-    min-height: 48px;
+.or-divider::before,
+.or-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border);
 }
 
-/* Log-Tabs (Segmented Control) */
-.log-tab-bar {
+.connect-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 4px;
-    background: rgba(15, 23, 42, 0.7);
-    border: 1px solid rgba(148, 163, 184, 0.16);
-    border-radius: 12px;
-    padding: 4px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: end;
+}
+
+.connect-grid .form-row { margin: 0; }
+.connect-grid .btn { min-width: 150px; }
+
+/* Protokolle */
+.log-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 3px;
+    padding: 3px;
     margin-bottom: 12px;
+    border-radius: 13px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
 }
 
 .log-tab {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    color: #94a3b8;
-    border: none;
+    min-height: 38px;
     padding: 6px 8px;
-    min-height: 44px;
-    font-size: 12.5px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 13.5px;
     font-weight: 500;
     line-height: 1.25;
-    border-radius: 8px;
     cursor: pointer;
-    transition: all 0.15s ease;
-    text-align: center;
-    white-space: normal;
-    word-break: normal;
-    hyphens: auto;
-    user-select: none;
+    transition: background .15s, color .15s;
 }
 
-.log-tab:hover {
-    background: rgba(255, 255, 255, 0.05);
-    color: #f1f5f9;
-}
+.log-tab:hover { color: #fff; background: rgba(255, 255, 255, 0.04); }
 
 .log-tab.active {
-    background: #2563eb;
-    color: #ffffff;
+    background: linear-gradient(135deg, #2563eb, #4f46e5);
+    color: #fff;
     font-weight: 600;
-    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
 }
 
-@media (max-width: 600px) {
-    .log-tab {
-        font-size: 11px;
-        padding: 4px 4px;
-        min-height: 40px;
-    }
-}
+.log-tab:focus-visible { outline: 2px solid #60a5fa; outline-offset: 1px; }
 
-.log-viewer-box {
-    background: #0f172a;
-    border: 1px solid #334155;
-    border-radius: 12px;
+.log-viewer {
+    height: 380px;
+    margin: 0;
     padding: 14px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    overflow: auto;
+    border-radius: var(--radius-sm);
+    background: rgba(2, 6, 23, 0.6);
+    border: 1px solid var(--border);
+    color: #e2e8f0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
     font-size: 12px;
     line-height: 1.5;
-    color: #e2e8f0;
-    height: 380px;
-    min-height: 380px;
-    max-height: 380px;
-    box-sizing: border-box;
-    overflow-y: auto;
-    overflow-x: auto;
     white-space: pre;
-    margin: 0;
-    transition: opacity 0.15s ease;
-    scrollbar-gutter: stable;
+    transition: opacity .15s;
     scrollbar-width: thin;
     scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
 }
 
-.log-viewer-box::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-}
+.log-timestamp { color: #38bdf8; font-weight: 600; }
+.log-empty { color: var(--subtle); }
+.log-error { color: #f87171; }
 
-.log-viewer-box::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.log-viewer-box::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.35);
-    border-radius: 4px;
-}
-
-.log-timestamp {
-    color: #38bdf8;
-    font-weight: 600;
-}
-
-/* Toast-Nachrichten */
+/* Hinweis-Meldung */
 .toast {
     position: fixed;
-    bottom: 24px;
     left: 50%;
+    bottom: 24px;
+    z-index: 300;
     max-width: calc(100% - 32px);
-    transform: translateX(-50%) translateY(100px);
-    opacity: 0;
-    padding: 14px 20px;
-    border-radius: 12px;
-    background: rgba(15,23,42,.96);
-    border: 1px solid rgba(148,163,184,.18);
-    box-shadow: 0 20px 40px rgba(0,0,0,.4);
-    color: #f1f5f9;
+    padding: 12px 18px;
+    border-radius: var(--radius-sm);
+    background: #1e293b;
+    border: 1px solid var(--border-strong);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.45);
+    color: var(--text);
     font-size: 14px;
     font-weight: 500;
-    z-index: 200;
-    transition: transform .3s, opacity .3s;
     overflow-wrap: anywhere;
+    opacity: 0;
+    transform: translate(-50%, 100px);
+    transition: transform .3s, opacity .3s;
 }
 
-.toast.show {
-    transform: translateX(-50%) translateY(0);
-    opacity: 1;
-}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.toast.success { border-color: rgba(74, 222, 128, 0.5); }
+.toast.error { border-color: rgba(248, 113, 113, 0.5); }
 
-.toast.success { border-color: rgba(74,222,128,.5); }
-.toast.error { border-color: rgba(248,113,113,.5); }
-
-/* Ladeanimation */
-.spinner {
-    display: inline-block;
-    width: 17px;
-    height: 17px;
-    flex-shrink: 0;
-    border: 2px solid rgba(255,255,255,.25);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: spin .8s linear infinite;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
+.dialog-message { margin: 0 0 8px; color: #cbd5e1; font-size: 14.5px; }
+.dialog-message a { color: #38bdf8; font-weight: 600; }
+.modal-spinner { padding: 14px 0 4px; text-align: center; }
 
 .hidden { display: none !important; }
 
-.back-link {
-    width: fit-content;
-    margin: 24px auto 0;
-    padding: 8px 12px;
-    border-radius: 10px;
-    color: #94a3b8;
-    text-decoration: none;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+/* Mobil */
+@media (max-width: 880px) {
+    .pair { grid-template-columns: minmax(0, 1fr); }
 }
 
-/* Modal-Dialog für Hotspot/WLAN-Wechsel */
-.modal-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(15,23,42,.85);
-    backdrop-filter: blur(4px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 300;
-    padding: 16px;
+@media (max-width: 720px) {
+    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .stat { padding: 10px 12px; }
+    .stat-value { font-size: 14px; }
 }
 
-.modal-box {
-    background: #1e293b;
-    border: 1px solid rgba(148,163,184,.25);
-    border-radius: 16px;
-    padding: 24px;
-    max-width: 440px;
-    width: 100%;
-    box-shadow: 0 25px 50px -12px rgba(0,0,0,.7);
-    color: #f1f5f9;
-}
-
-.back-link:hover { background: rgba(148,163,184,.12); }
-
-@media (max-width: 860px) {
-    .status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
-@media (max-width: 767px) {
-    .section-row-2col { grid-template-columns: 1fr; }
-    .connect-form-grid { grid-template-columns: 1fr; gap: 12px; padding-right: 0 !important; }
-    .network-header-row { padding-right: 0 !important; }
-    .connect-btn-col { min-width: 100% !important; width: 100% !important; }
-    .connect-btn-col .btn-network-action { width: 100% !important; }
-    .page-header { flex-direction: column; text-align: center; }
-    .header-brand { flex-direction: column; }
-}
-
-@media (max-width: 520px) {
-    body { padding: 16px 12px 32px; }
-    .settings-card { padding: 20px 16px; border-radius: 16px; }
-    .page-title { font-size: 22px; }
-    .status-grid { grid-template-columns: 1fr; }
-    .network-item { padding: 12px; }
-    .btn-small { padding: 0 12px; }
+@media (max-width: 640px) {
+    .connect-grid { grid-template-columns: minmax(0, 1fr); }
+    .log-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 </style>
 </head>
 
 <body>
-<div class="container">
+
+<!-- Symbole -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+        <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></symbol>
+        <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></symbol>
+        <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></symbol>
+        <symbol id="i-hotspot" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49M7.76 16.24a6 6 0 0 1 0-8.49M19.07 4.93a10 10 0 0 1 0 14.14M4.93 19.07a10 10 0 0 1 0-14.14"/></symbol>
+        <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
+        <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/></symbol>
+        <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8M21 3v5h-5"/></symbol>
+        <symbol id="i-terminal" viewBox="0 0 24 24"><path d="m4 17 6-6-6-6M12 19h8"/></symbol>
+        <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+        <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"/></symbol>
+    </defs>
+</svg>
+
+<div class="page">
 
     <!-- Kopfzeile -->
-    <header class="page-header">
-        <div class="header-brand">
-            <div class="logo" aria-label="Autodarts">
-                <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <header class="topbar">
+        <div class="brand">
+            <div class="logo">
+                <svg viewBox="0 0 64 64" fill="none" aria-hidden="true">
                     <circle cx="32" cy="32" r="28" stroke="white" stroke-width="3"/>
-                    <circle cx="32" cy="32" r="23" stroke="white" stroke-width="2"/>
-                    <circle cx="32" cy="32" r="14" stroke="white" stroke-width="2"/>
-                    <circle cx="32" cy="32" r="9" stroke="white" stroke-width="2"/>
-                    <circle cx="32" cy="32" r="2.5" fill="white"/>
-                    <path d="M32 4V60M4 32H60M12.2 12.2L51.8 51.8M51.8 12.2L12.2 51.8"
-                          stroke="white" stroke-width="1.5" opacity=".8"/>
+                    <circle cx="32" cy="32" r="20" stroke="white" stroke-width="2"/>
+                    <circle cx="32" cy="32" r="11" stroke="white" stroke-width="2"/>
+                    <circle cx="32" cy="32" r="3" fill="white"/>
+                    <path d="M32 4v56M4 32h56M12.2 12.2l39.6 39.6M51.8 12.2 12.2 51.8" stroke="white" stroke-width="1.5" opacity=".7"/>
                 </svg>
             </div>
             <div>
-                <h1 class="page-title">Entwicklermodus</h1>
-                <p class="page-subtitle">Netzwerk, System &amp; Diagnose</p>
+                <h1>Admin</h1>
+                <p>Netzwerk, System &amp; Diagnose</p>
             </div>
         </div>
-        <a href="/" class="btn-back-header" title="Zurück zur Steuerung">
-            <svg width="22" height="14" viewBox="0 0 24 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:inline-block; vertical-align: middle; position: relative; top: 1.5px; flex-shrink: 0;"><line x1="22" y1="7" x2="2" y2="7"></line><polyline points="8 1 2 7 8 13"></polyline></svg>
-            Zurück zur Steuerung
+        <a href="/" class="link-btn" title="Zurück zur Steuerung" aria-label="Zurück zur Steuerung">
+            <svg class="icon" aria-hidden="true"><use href="#i-back"/></svg>
+            <span class="label">Zur Steuerung</span>
         </a>
     </header>
 
-    <!-- 1. Netzwerkstatus -->
-    <section class="settings-card">
-        <h2 class="section-title">🌐 Netzwerkstatus</h2>
-        <div class="status-grid" id="statusGrid">
-            <div class="stat-box">
-                <div class="stat-label">Netzwerkmodus</div>
+    <!-- Netzwerkstatus -->
+    <section class="card">
+        <div class="card-head">
+            <h2>Netzwerkstatus</h2>
+            <p>Wie die Box gerade mit dem Netzwerk verbunden ist.</p>
+        </div>
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-label">Verbindung</div>
                 <div class="stat-value" id="decisionValue">–</div>
             </div>
-            <div class="stat-box">
-                <div class="stat-label">Backend</div>
+            <div class="stat">
+                <div class="stat-label">Netzwerkverwaltung</div>
                 <div class="stat-value" id="backendValue">–</div>
             </div>
-            <div class="stat-box">
-                <div class="stat-label">Hotspot</div>
+            <div class="stat">
+                <div class="stat-label">Setup-Hotspot</div>
                 <div class="stat-value" id="hotspotValue">–</div>
             </div>
-            <div class="stat-box">
-                <div class="stat-label">Aktive Netzwerkverbindungen</div>
+            <div class="stat">
+                <div class="stat-label">Verbundene WLANs</div>
                 <div class="stat-value" id="activeCount">–</div>
             </div>
         </div>
     </section>
 
-    <!-- 2. Verfügbare Netzwerke inklusive Manuell verbinden -->
-    <section class="settings-card">
-        <div class="network-header-row">
-            <h2 class="section-title" style="margin:0;">📡 Verfügbare Netzwerke</h2>
-            <button type="button" class="btn-small btn-secondary btn-network-action" onclick="scanNetworks()" id="scanBtn">
-                <span class="spinner hidden" id="scanSpinner"></span>
-                <span id="scanLabel">🔍 Scannen</span>
+    <!-- WLAN -->
+    <section class="card">
+        <div class="card-head with-action">
+            <div>
+                <h2>WLAN</h2>
+                <p>Netz antippen, Passwort eingeben, verbinden.</p>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="scanNetworks()" id="scanBtn">
+                <span class="spinner sm hidden" id="scanSpinner"></span>
+                <span id="scanLabel" style="display:inline-flex;align-items:center;gap:8px;">
+                    <svg class="icon" style="width:16px;height:16px" aria-hidden="true"><use href="#i-search"/></svg>
+                    Neu suchen
+                </span>
             </button>
         </div>
 
         <div class="network-list" id="networkList" aria-live="polite">
-            <div style="text-align:center;padding:24px;color:#64748b;font-size:13px;">
-                Keine Netzwerke geladen. Klicken Sie auf „Scannen“.
-            </div>
+            <div class="network-empty">Netzwerke werden geladen …</div>
         </div>
 
-        <div class="card-inner-divider">
-            <span>ODER MANUELL VERBINDEN</span>
-        </div>
+        <div class="or-divider">oder manuell eingeben</div>
 
-        <form class="connect-form" id="connectForm" onsubmit="connectManual(event)">
-            <div class="connect-form-grid" style="padding-right: 16px;">
+        <form id="connectForm" onsubmit="connectManual(event)">
+            <div class="connect-grid">
                 <div class="form-row">
-                    <label class="form-label" for="manualSsid">SSID (Netzwerkname)</label>
-                    <input type="text" class="form-input" id="manualSsid"
-                           placeholder="z. B. MeinHeimWLAN" required autocomplete="off">
+                    <label class="form-label" for="manualSsid">Netzwerkname (SSID)</label>
+                    <input type="text" class="form-input" id="manualSsid" placeholder="z. B. MeinHeimWLAN" required autocomplete="off">
                 </div>
-
                 <div class="form-row">
-                    <label class="form-label" for="manualPass">Passwort (leer = offen)</label>
-                    <input type="password" class="form-input" id="manualPass"
-                           placeholder="WLAN-Passwort" autocomplete="off">
+                    <label class="form-label" for="manualPass">WLAN-Passwort</label>
+                    <input type="password" class="form-input" id="manualPass" placeholder="Leer lassen bei offenem WLAN" autocomplete="off">
                 </div>
-
-                <div class="form-row connect-btn-col" style="min-width: 124px; width: 124px;">
-                    <button type="submit" class="btn-small btn-secondary btn-network-action" id="connectBtn">
-                        <span class="spinner hidden" id="connectSpinner"></span>
-                        <span id="connectLabel">📶 Verbinden</span>
-                    </button>
-                </div>
+                <button type="submit" class="btn btn-primary" id="connectBtn">
+                    <span class="spinner sm hidden" id="connectSpinner"></span>
+                    <span id="connectLabel">Verbinden</span>
+                </button>
             </div>
         </form>
     </section>
 
-    <!-- 3. Setup-Hotspot & 4. Gerät übergeben (2-Spalten-Layout auf Desktop) -->
-    <div class="section-row-2col">
-        <!-- 3. Setup-Hotspot -->
-        <section class="settings-card flex-col">
-            <div>
-                <h2 class="section-title">📡 Setup-Hotspot (Recovery)</h2>
-                <p class="section-desc" id="hotspotInfo">
-                    Ermöglicht die Ersteinrichtung über ein Smartphone, Tablet oder ein Notebook (<code>192.168.4.1/24</code>), falls weder Ethernet noch ein bekanntes WLAN verfügbar ist. Nach erfolgreicher Netzwerkkonfiguration schaltet sich der Hotspot automatisch ab.
+    <!-- Setup-Hotspot & Gerät übergeben -->
+    <div class="pair">
+        <section class="card panel">
+            <div class="card-head">
+                <h2>Setup-Hotspot</h2>
+                <p id="hotspotInfo">
+                    Eigenes WLAN „Autodarts-Setup“ der Box, über das sich ein Handy oder Notebook verbinden kann (<code>192.168.4.1</code>). Startet automatisch, wenn weder LAN noch ein bekanntes WLAN verfügbar ist, und schaltet sich nach der Einrichtung wieder ab.
                 </p>
             </div>
-            <div class="buttons" style="margin-top:auto;">
-                <button type="button" class="btn-small btn-secondary"
-                        onclick="startHotspot()" id="hotspotStartBtn">
-                    <span class="spinner hidden" id="hotspotStartSpinner"></span>
-                    <span id="hotspotStartLabel">▶️ Hotspot starten</span>
-                </button>
-                <button type="button" class="btn-small btn-danger"
-                        onclick="stopHotspot()" id="hotspotStopBtn" style="display:none;">
-                    <span class="spinner hidden" id="hotspotStopSpinner"></span>
-                    <span id="hotspotStopLabel">⏹️ Hotspot stoppen</span>
-                </button>
-            </div>
+            <button type="button" class="btn btn-secondary btn-block" onclick="startHotspot()" id="hotspotStartBtn">
+                <span class="spinner sm hidden" id="hotspotStartSpinner"></span>
+                <span id="hotspotStartLabel" style="display:inline-flex;align-items:center;gap:10px;">
+                    <svg class="icon" aria-hidden="true"><use href="#i-hotspot"/></svg>
+                    Hotspot starten
+                </span>
+            </button>
+            <button type="button" class="btn btn-danger btn-block" onclick="stopHotspot()" id="hotspotStopBtn" style="display:none;">
+                <span class="spinner sm hidden" id="hotspotStopSpinner"></span>
+                <span id="hotspotStopLabel" style="display:inline-flex;align-items:center;gap:10px;">
+                    <svg class="icon" aria-hidden="true"><use href="#i-stop"/></svg>
+                    Hotspot beenden
+                </span>
+            </button>
         </section>
 
-        <!-- 4. Gerät übergeben -->
-        <section class="settings-card flex-col">
-            <div>
-                <h2 class="section-title">🔄 Gerät übergeben / WLAN zurücksetzen</h2>
-                <p class="section-desc">
-                    Entfernt gezielt alle über Autodarts eingerichteten WLAN-Profile (<code>autodarts-*</code>) für die sichere Weitergabe an Dritte. Ethernet-Verbindungen, Systemnetzwerke und Autodarts-Spieldaten bleiben geschützt erhalten.
+        <section class="card panel">
+            <div class="card-head">
+                <h2>Gerät übergeben</h2>
+                <p>
+                    Löscht alle hier eingerichteten WLAN-Zugangsdaten (<code>autodarts-*</code>), z. B. vor der Weitergabe an andere. LAN-Verbindungen, Systemnetzwerke und Autodarts-Daten bleiben erhalten.
                 </p>
             </div>
-            <div class="buttons" style="margin-top:auto;">
-                <button type="button" class="btn-small btn-danger" id="handoverBtn"
-                        onclick="confirmHandover()">
-                    ❌ WLAN-Daten löschen &amp; Handover vorbereiten
-                </button>
-            </div>
+            <button type="button" class="btn btn-danger btn-block" id="handoverBtn" onclick="confirmHandover()">
+                <svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg>
+                WLAN-Zugangsdaten löschen
+            </button>
         </section>
     </div>
 
-    <!-- Experten-Werkzeuge: Autodarts-Dienst & Terminal-Fallback -->
-    <section class="settings-card">
-        <h2 class="section-title">🧰 Autodarts – Experten-Werkzeuge</h2>
-        <p class="section-desc">
-            Normalerweise nicht nötig: Die Einrichtung des Boards erfolgt im Board-Manager auf der Startseite.
-            Die Terminal-Einrichtung (Autodarts-TUI) ist nur als Fallback gedacht, z. B. für Autodarts-Versionen ohne Board-Manager.
-        </p>
-        <div class="status-grid" style="margin-top:12px;">
-            <div class="stat-box">
-                <div class="stat-label">Autodarts-Version</div>
+    <!-- Autodarts -->
+    <section class="card">
+        <div class="card-head">
+            <h2>Autodarts</h2>
+            <p>Das Board wird im Board-Manager auf der Startseite eingerichtet. Die Terminal-Einrichtung ist nur ein Fallback für ältere Autodarts-Versionen ohne Board-Manager.</p>
+        </div>
+        <div class="stats" style="--cols: 3;">
+            <div class="stat">
+                <div class="stat-label">Version</div>
                 <div class="stat-value" id="adVersionValue">–</div>
             </div>
-            <div class="stat-box">
-                <div class="stat-label">Autostart (Dienst)</div>
+            <div class="stat">
+                <div class="stat-label">Autostart</div>
                 <div class="stat-value" id="adServiceValue">–</div>
             </div>
-            <div class="stat-box">
+            <div class="stat">
                 <div class="stat-label">Board-Manager</div>
                 <div class="stat-value" id="adBoardManagerValue">–</div>
             </div>
         </div>
-        <div class="buttons" style="margin-top:14px;">
-            <button type="button" class="btn-small btn-secondary" onclick="adminSetupAutostart()">
-                🔁 Autostart neu einrichten
-            </button>
-            <button type="button" class="btn-small btn-secondary" onclick="window.open('/terminal', '_blank')">
-                ⌨️ Terminal-Einrichtung (TUI) öffnen
-            </button>
+
+        <!-- Nur sichtbar, wenn der Autostart fehlt -->
+        <div class="notice" id="adAutostartNotice" style="margin-top:16px;">
+            <svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>
+            <div class="notice-body">
+                <strong>Autodarts startet nicht automatisch</strong>
+                <p>Ohne Autostart ist das Board nach dem Einschalten nicht bereit.</p>
+                <button type="button" class="btn btn-secondary btn-sm" id="adAutostartBtn" onclick="adminSetupAutostart()">
+                    <svg class="icon" aria-hidden="true"><use href="#i-rotate"/></svg>
+                    Autostart einrichten
+                </button>
+            </div>
         </div>
+
+        <button type="button" class="btn btn-ghost btn-sm" style="margin-top:16px;" onclick="window.open('/terminal', '_blank')">
+            <svg class="icon" aria-hidden="true"><use href="#i-terminal"/></svg>
+            Terminal-Einrichtung öffnen (Fallback)
+        </button>
     </section>
 
-    <!-- 5. System-Informationen -->
-    <section class="settings-card">
-        <h2 class="section-title">🖥️ System-Informationen</h2>
-        <div class="status-grid" id="systemGrid">
-            <div class="stat-box">
-                <div class="stat-label">Hostname</div>
-                <div class="stat-value" id="hostnameValue">Wird nicht geliefert</div>
+    <!-- System -->
+    <section class="card">
+        <div class="card-head">
+            <h2>System</h2>
+            <p>Adresse, Ports und Version dieser Box.</p>
+        </div>
+        <div class="stats" style="--cols: 3;">
+            <div class="stat">
+                <div class="stat-label">Gerätename</div>
+                <div class="stat-value" id="hostnameValue">–</div>
             </div>
-            <div class="stat-box">
-                <div class="stat-label">mDNS-Adresse</div>
-                <div class="stat-value" id="mdnsValue">Nicht bestätigt</div>
+            <div class="stat">
+                <div class="stat-label">Adresse im Netzwerk</div>
+                <div class="stat-value" id="mdnsValue">–</div>
             </div>
-            <div class="stat-box">
+            <div class="stat">
                 <div class="stat-label">HTTP-Port</div>
                 <div class="stat-value" id="httpPortValue">–</div>
             </div>
-            <div class="stat-box">
+            <div class="stat">
                 <div class="stat-label">WebSocket-Port</div>
-                <div class="stat-value" id="wsPortValue">Wird nicht geliefert</div>
+                <div class="stat-value" id="wsPortValue">–</div>
             </div>
-            <div class="stat-box">
+            <div class="stat">
                 <div class="stat-label">Version</div>
                 <div class="stat-value" id="appVersionValue">–</div>
             </div>
-            <div class="stat-box">
+            <div class="stat">
                 <div class="stat-label">Automatische Updates</div>
                 <div class="stat-value" id="autoUpdateValue">–</div>
             </div>
         </div>
     </section>
 
-    <!-- 6. System- & Dienst-Protokolle (Diagnose) -->
-    <section class="settings-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;">
-            <h2 class="section-title" style="margin:0;">📋 System- &amp; Dienst-Protokolle</h2>
-            <div id="logStatusIndicator" style="display:inline-flex;align-items:center;height:20px;">
-                <span class="spinner hidden" id="logSpinner" style="width:14px;height:14px;border-width:2px;margin:0;"></span>
+    <!-- Protokolle -->
+    <section class="card">
+        <div class="card-head with-action">
+            <div>
+                <h2>Protokolle</h2>
+                <p>Die letzten 100 Einträge – hilfreich bei der Fehlersuche.</p>
             </div>
+            <span class="spinner sm hidden" id="logSpinner"></span>
         </div>
 
-        <div class="log-tab-bar">
-            <button type="button" class="log-tab active" data-target="app" onclick="switchLogTab('app')" title="Headless Control">Headless Control</button>
-            <button type="button" class="log-tab" data-target="firewall" onclick="switchLogTab('firewall')" title="Firewall &amp; Dispatcher">Firewall &amp; Dispatcher</button>
-            <button type="button" class="log-tab" data-target="autodarts" onclick="switchLogTab('autodarts')" title="Autodarts Dienst">Autodarts Dienst</button>
-            <button type="button" class="log-tab" data-target="system" onclick="switchLogTab('system')" title="System-Warnungen">System-Warnungen</button>
+        <div class="log-tabs" role="tablist">
+            <button type="button" class="log-tab active" data-target="app" onclick="switchLogTab('app')">Headless Control</button>
+            <button type="button" class="log-tab" data-target="firewall" onclick="switchLogTab('firewall')">Firewall &amp; Netzwerk</button>
+            <button type="button" class="log-tab" data-target="autodarts" onclick="switchLogTab('autodarts')">Autodarts</button>
+            <button type="button" class="log-tab" data-target="system" onclick="switchLogTab('system')">System-Warnungen</button>
         </div>
 
-        <pre id="logViewer" class="log-viewer-box">Lade Protokolle …</pre>
+        <pre id="logViewer" class="log-viewer">Protokolle werden geladen …</pre>
     </section>
 
-    <!-- Fußbereich -->
-    <footer style="text-align:center;padding:8px 0 16px;">
-        <a href="/" class="back-link" title="Zurück zur Steuerung">
-            <svg width="22" height="14" viewBox="0 0 24 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:inline-block; vertical-align: middle; flex-shrink: 0;"><line x1="22" y1="7" x2="2" y2="7"></line><polyline points="8 1 2 7 8 13"></polyline></svg>
-            Zurück zur Steuerung
-        </a>
-    </footer>
-
+    <footer class="footer">Autodarts Headless Control</footer>
 </div>
 
-<div class="modal-backdrop hidden" id="wifiModalBackdrop" role="dialog" aria-modal="true">
-    <div class="modal-box" id="wifiModalBox">
-        <h3 id="wifiModalTitle" style="margin-top:0;font-size:18px;">WLAN-Verbindung</h3>
-        <p id="wifiModalMessage" style="color:#cbd5e1;font-size:14px;line-height:1.6;"></p>
-        <div id="wifiModalSpinner" style="text-align:center;padding:16px 0;">
-            <span class="spinner" style="width:32px;height:32px;border-width:3px;border-top-color:#38bdf8;"></span>
+<!-- WLAN-/Hotspot-Umschaltung -->
+<div class="overlay" id="wifiModalBackdrop">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="wifiModalTitle">
+        <h2 id="wifiModalTitle">WLAN-Verbindung</h2>
+        <div id="wifiModalMessage" class="dialog-message"></div>
+        <div id="wifiModalSpinner" class="modal-spinner"><span class="spinner"></span></div>
+        <div id="wifiModalActions" style="margin-top:18px;display:none;">
+            <button type="button" class="btn btn-primary btn-block" onclick="closeWifiModal()">Verstanden</button>
         </div>
-        <div id="wifiModalActions" style="margin-top:20px;display:none;">
-            <button type="button" class="btn-small btn-primary" style="width:100%;" onclick="closeWifiModal()">Verstanden</button>
+    </div>
+</div>
+
+<!-- Gerät übergeben: Rückfrage -->
+<div class="overlay" id="handoverOverlay">
+    <div class="dialog" role="dialog" aria-modal="true">
+        <div class="dialog-icon danger"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></div>
+        <h2>WLAN-Zugangsdaten löschen?</h2>
+        <p>Alle hier eingerichteten WLANs werden entfernt. LAN und Autodarts-Daten bleiben erhalten. Ohne LAN-Kabel startet danach der Setup-Hotspot.</p>
+        <div class="dialog-buttons">
+            <button type="button" class="btn btn-ghost" onclick="hideDialog('handoverOverlay')">Abbrechen</button>
+            <button type="button" class="btn btn-danger" onclick="hideDialog('handoverOverlay'); doHandover();">Löschen</button>
         </div>
     </div>
 </div>
@@ -980,57 +524,61 @@ body {
 <script>
 'use strict';
 
-// Globaler Zustand
 let currentNetworks = [];
 let refreshInProgress = false;
 let isHotspotActive = false;
 
-// Modal-Dialog für WLAN-Wechsel
+// --- Dialoge ---
+function showDialog(id) {
+    document.getElementById(id).style.display = 'flex';
+}
+
+function hideDialog(id) {
+    document.getElementById(id).style.display = 'none';
+}
+
+document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') hideDialog('handoverOverlay');
+});
+
+document.getElementById('handoverOverlay').addEventListener('click', event => {
+    if (event.target.id === 'handoverOverlay') hideDialog('handoverOverlay');
+});
+
 function showWifiModal(title, message, showSpinner = true, showClose = false) {
     document.getElementById('wifiModalTitle').textContent = title;
     document.getElementById('wifiModalMessage').innerHTML = message;
     document.getElementById('wifiModalSpinner').style.display = showSpinner ? 'block' : 'none';
     document.getElementById('wifiModalActions').style.display = showClose ? 'block' : 'none';
-    document.getElementById('wifiModalBackdrop').classList.remove('hidden');
+    showDialog('wifiModalBackdrop');
 }
 
 function closeWifiModal() {
-    document.getElementById('wifiModalBackdrop').classList.add('hidden');
+    hideDialog('wifiModalBackdrop');
 }
 
-// Toast-Nachrichten
+// --- Hinweis-Meldung ---
 function showToast(message, type = 'info') {
     const toast = document.getElementById('toast');
     document.getElementById('toastMessage').textContent = String(message);
-
-    toast.className = 'toast show' +
-        (type === 'success' ? ' success' : type === 'error' ? ' error' : '');
-
+    toast.className = 'toast show' + (type === 'success' ? ' success' : type === 'error' ? ' error' : '');
     clearTimeout(toast._timeout);
-    toast._timeout = setTimeout(() => {
-        toast.classList.remove('show');
-    }, 4000);
+    toast._timeout = setTimeout(() => toast.classList.remove('show'), 4000);
 }
 
-// Ladezustand für Buttons
 function setButtonLoading(btnId, spinnerId, labelId, loading) {
     const btn = document.getElementById(btnId);
     const spinner = document.getElementById(spinnerId);
     const label = document.getElementById(labelId);
-
     if (btn) btn.disabled = loading;
     if (spinner) spinner.classList.toggle('hidden', !loading);
     if (label) label.classList.toggle('hidden', loading);
 }
 
-// API-Helfer
+// --- API ---
 async function apiGet(path) {
     const response = await fetch(path, { cache: 'no-store' });
-
-    if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-    }
-
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return response.json();
 }
 
@@ -1040,159 +588,68 @@ async function apiPost(path, data) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
     });
-
     const json = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-        throw new Error(json.error || json.message || `HTTP ${response.status}`);
-    }
-
+    if (!response.ok) throw new Error(json.error || json.message || `HTTP ${response.status}`);
     return json;
 }
 
-// HTML-Ausgabe absichern
 function escapeHtml(value) {
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;'
-    };
-
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
     return String(value ?? '').replace(/[&<>"']/g, char => map[char]);
 }
 
-// Statusanzeige
+// --- Netzwerkstatus ---
 function updateStatusUI(state = {}) {
-    const decision = state.decision || 'unknown';
-
     const statusMap = {
-        keep_ethernet: {
-            label: 'Ethernet aktiv (Priorität)',
-            css: 'status-ethernet'
-        },
-        connect_wifi: {
-            label: 'WLAN verbunden',
-            css: 'status-wifi'
-        },
-        start_hotspot: {
-            label: 'Hotspot aktiv / wird gestartet',
-            css: 'status-hotspot'
-        },
-        error_no_network: {
-            label: 'Kein Netzwerk verfügbar',
-            css: 'status-error'
-        },
-        unknown: {
-            label: 'Status unbekannt',
-            css: 'status-unknown'
-        }
+        keep_ethernet:    { label: 'LAN (Kabel)',             css: 'ok' },
+        connect_wifi:     { label: 'WLAN',                    css: 'wifi' },
+        start_hotspot:    { label: 'Setup-Hotspot',           css: 'warn' },
+        error_no_network: { label: 'Kein Netzwerk',           css: 'error' },
+        unknown:          { label: 'Unbekannt',               css: 'unknown' }
     };
-
-    const status = statusMap[decision] || {
-        label: decision,
-        css: 'status-unknown'
-    };
+    const decision = state.decision || 'unknown';
+    const status = statusMap[decision] || { label: decision, css: 'unknown' };
 
     document.getElementById('decisionValue').innerHTML =
-        '<span class="status-badge ' + status.css + '">' +
-            '<span class="dot"></span>' +
-            escapeHtml(status.label) +
-        '</span>';
+        `<span class="pill ${status.css}">${escapeHtml(status.label)}</span>`;
 
-    isHotspotActive = (state.hotspot_active === true);
-
+    isHotspotActive = state.hotspot_active === true;
     document.getElementById('hotspotValue').textContent =
-        state.hotspot_active === true ? 'Aktiv' :
-        state.hotspot_active === false ? 'Inaktiv' : 'Unbekannt';
+        state.hotspot_active === true ? 'Aktiv' : state.hotspot_active === false ? 'Aus' : 'Unbekannt';
 
-    // Nur tatsächlich als in_use markierte WLAN-Netze zählen.
-    // Andere aktive NetworkManager-Verbindungen, z. B. Ethernet,
-    // werden nicht als verbundenes WLAN mitgezählt.
-    const networks = Array.isArray(state.available_networks)
-        ? state.available_networks
-        : [];
-
-    const connectedWifiCount = networks.filter(net => net.in_use === true).length;
+    // Nur tatsächlich verbundene WLANs zählen (LAN zählt hier nicht mit).
+    const networks = Array.isArray(state.available_networks) ? state.available_networks : [];
     document.getElementById('activeCount').textContent =
-        String(connectedWifiCount);
+        String(networks.filter(net => net.in_use === true).length);
 
-    // Systeminformationen nur aus gelieferten bzw. überprüfbaren Werten setzen.
     updateSystemInfo();
 
-    const startBtn = document.getElementById('hotspotStartBtn');
-    const stopBtn = document.getElementById('hotspotStopBtn');
-
-    if (state.hotspot_active === true) {
-        startBtn.style.display = 'none';
-        stopBtn.style.display = 'flex';
-    } else {
-        startBtn.style.display = 'flex';
-        stopBtn.style.display = 'none';
-    }
+    document.getElementById('hotspotStartBtn').style.display = isHotspotActive ? 'none' : 'flex';
+    document.getElementById('hotspotStopBtn').style.display = isHotspotActive ? 'flex' : 'none';
 }
 
-// Systeminformationen
 async function updateSystemInfo() {
-    const fields = {
-        hostname: document.getElementById('hostnameValue'),
-        mdns: document.getElementById('mdnsValue'),
-        http: document.getElementById('httpPortValue'),
-        ws: document.getElementById('wsPortValue')
-    };
-
+    const set = (id, value) => { document.getElementById(id).textContent = value; };
     try {
-        const response = await fetch('/api/system', {
-            cache: 'no-store'
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-
-        const state = await response.json();
-
-        fields.hostname.textContent =
-            state.hostname || 'Nicht verfügbar';
-
-        fields.mdns.textContent =
-            state.mdns_hostname || state.mdns_address || 'Nicht bestätigt';
-
-        fields.http.textContent =
-            state.http_port != null
-                ? String(state.http_port)
-                : 'Nicht verfügbar';
-
-        document.getElementById('appVersionValue').textContent = state.version || 'Unbekannt';
-        document.getElementById('autoUpdateValue').textContent =
-            state.auto_update === false ? 'Aus' : 'An (täglich)';
-
-        fields.ws.textContent =
-            state.ws_port != null
-                ? String(state.ws_port)
-                : state.websocket_port != null
-                    ? String(state.websocket_port)
-                    : 'Nicht verfügbar';
-
+        const state = await apiGet('/api/system');
+        set('hostnameValue', state.hostname || 'Nicht verfügbar');
+        set('mdnsValue', state.mdns_hostname || state.mdns_address || 'Nicht bestätigt');
+        set('httpPortValue', state.http_port != null ? String(state.http_port) : 'Nicht verfügbar');
+        set('wsPortValue', state.ws_port != null ? String(state.ws_port)
+            : state.websocket_port != null ? String(state.websocket_port) : 'Nicht verfügbar');
+        set('appVersionValue', state.version || 'Unbekannt');
+        set('autoUpdateValue', state.auto_update === false ? 'Aus' : 'An (täglich)');
     } catch (error) {
         console.error('Systeminformationen konnten nicht geladen werden:', error);
-
-        fields.hostname.textContent = 'Nicht verfügbar';
-        fields.mdns.textContent = 'Nicht verfügbar';
-        fields.http.textContent = 'Nicht verfügbar';
-        fields.ws.textContent = 'Nicht verfügbar';
+        ['hostnameValue', 'mdnsValue', 'httpPortValue', 'wsPortValue'].forEach(id => set(id, 'Nicht verfügbar'));
     }
 }
 
-// Netzwerkstatus laden
 async function loadState() {
     if (refreshInProgress) return;
     refreshInProgress = true;
-
     try {
         const state = await apiGet('/api/wifi/state');
-
         updateStatusUI(state);
         renderNetworks(state.available_networks);
     } catch (error) {
@@ -1201,216 +658,130 @@ async function loadState() {
         document.getElementById('hotspotValue').textContent = 'Unbekannt';
         document.getElementById('activeCount').textContent = '–';
     }
-
     try {
         const backend = await apiGet('/api/wifi/backend');
         document.getElementById('backendValue').textContent =
-            backend.backend || 'Unbekannt';
+            backend.backend === 'networkmanager' ? 'Network­Manager' : (backend.backend || 'Unbekannt');
     } catch (error) {
-        document.getElementById('backendValue').textContent =
-            'Nicht erreichbar';
+        document.getElementById('backendValue').textContent = 'Nicht erreichbar';
     } finally {
         refreshInProgress = false;
     }
 }
 
-// Netzwerke anzeigen; verbundenes WLAN steht immer oben.
-function renderNetworks(networks) {
-    const list = document.getElementById('networkList');
-
-    const safeNetworks = Array.isArray(networks) ? [...networks] : [];
-
-    safeNetworks.sort((a, b) =>
-        Number(b.in_use === true) - Number(a.in_use === true)
-    );
-
-    currentNetworks = safeNetworks;
-
-    if (safeNetworks.length === 0) {
-        list.innerHTML =
-            '<div style="text-align:center;padding:24px;color:#64748b;font-size:13px;">' +
-            'Keine Netzwerke gefunden. Klicken Sie auf „Scannen“.' +
-            '</div>';
-        return;
-    }
-
-    list.innerHTML = safeNetworks.map((net, index) => {
-        const ssid = String(net.ssid ?? '(Unbekanntes Netzwerk)');
-        const security = String(net.security ?? '');
-        const isOpen = !security ||
-            security.toLowerCase() === 'open';
-
-        const signalBars = signalToBars(net.signal);
-        const connected = net.in_use === true;
-
-        return `
-            <div class="network-item ${connected ? 'connected' : ''}"
-                 data-idx="${index}">
-                <div class="network-info">
-                    <div class="network-ssid">
-                        ${escapeHtml(ssid)}
-                        ${connected
-                            ? '<span style="color:#60a5fa;margin-left:6px;">● Verbunden</span>'
-                            : ''}
-                    </div>
-
-                    <div class="network-meta">
-                        <span class="network-signal" aria-label="Signalstärke">
-                            ${signalBars}
-                        </span>
-
-                        <span>
-                            ${isOpen ? '🔓 Offen' : '🔒 ' + escapeHtml(security)}
-                        </span>
-                    </div>
-                </div>
-
-                <div class="network-actions">
-                    ${connected
-                        ? '<span style="display:inline-flex;align-items:center;justify-content:center;width:124px;height:40px;color:#60a5fa;font-weight:600;font-size:13px;box-sizing:border-box;">● Aktiv</span>'
-                        : `<button type="button" class="btn-small btn-secondary btn-network-action"
-                                   onclick="selectNetwork(${index})">
-                               Verbinden
-                           </button>`}
-                </div>
-            </div>
-        `;
-    }).join('');
-
-    requestAnimationFrame(alignNetworkButtons);
-}
-
-function alignNetworkButtons() {
-    const headerRow = document.querySelector('.network-header-row');
-    const formGrid = document.querySelector('.connect-form-grid');
-    if (!headerRow || !formGrid) return;
-
-    if (window.innerWidth <= 767) {
-        headerRow.style.paddingRight = '0px';
-        formGrid.style.paddingRight = '0px';
-        return;
-    }
-
-    const listBtn = document.querySelector('#networkList .network-actions');
-    const card = headerRow.closest('.settings-card');
-    if (!card) return;
-
-    if (!listBtn) {
-        headerRow.style.paddingRight = '16px';
-        formGrid.style.paddingRight = '16px';
-        return;
-    }
-
-    const cardRect = card.getBoundingClientRect();
-    const listBtnRect = listBtn.getBoundingClientRect();
-    const cardPaddingRight = parseFloat(window.getComputedStyle(card).paddingRight) || 26;
-
-    const targetPaddingRight = Math.max(0, Math.round(cardRect.right - cardPaddingRight - listBtnRect.right));
-
-    headerRow.style.paddingRight = targetPaddingRight + 'px';
-    formGrid.style.paddingRight = targetPaddingRight + 'px';
-}
-
-// Signalstärke als Balken darstellen.
-// Unterstützt Prozentwerte (0–100) und dBm-Werte (typisch -100 bis -30).
+// --- WLAN-Liste ---
 function signalToBars(signal) {
     const value = Number(signal);
     let percent = 0;
-
     if (Number.isFinite(value)) {
-        if (value < 0) {
-            percent = Math.max(0, Math.min(100, ((value + 100) / 70) * 100));
-        } else {
-            percent = Math.max(0, Math.min(100, value));
-        }
+        percent = value < 0
+            ? Math.max(0, Math.min(100, ((value + 100) / 70) * 100))
+            : Math.max(0, Math.min(100, value));
     }
-
-    const activeBars = Math.round(percent / 20);
-    let html = '';
-
-    for (let i = 1; i <= 5; i++) {
-        html += `<span class="signal-bar ${i <= activeBars ? 'active' : ''}"
-                      style="height:${i * 3}px"></span>`;
+    const activeBars = Math.max(1, Math.round(percent / 25));
+    let html = '<span class="signal" aria-hidden="true">';
+    for (let i = 1; i <= 4; i++) {
+        html += `<span class="signal-bar ${i <= activeBars ? 'active' : ''}" style="height:${i * 3.5}px"></span>`;
     }
-
-    return html;
+    return html + '</span>';
 }
 
-// Netzwerk auswählen und Formular vorausfüllen
+function renderNetworks(networks) {
+    const list = document.getElementById('networkList');
+    const safeNetworks = Array.isArray(networks) ? [...networks] : [];
+    safeNetworks.sort((a, b) => Number(b.in_use === true) - Number(a.in_use === true));
+    currentNetworks = safeNetworks;
+
+    if (safeNetworks.length === 0) {
+        list.innerHTML = '<div class="network-empty">Keine Netzwerke gefunden. Tippe auf „Neu suchen“.</div>';
+        return;
+    }
+
+    const selected = document.getElementById('manualSsid').value;
+    list.innerHTML = safeNetworks.map((net, index) => {
+        const ssid = String(net.ssid ?? '(Unbekanntes Netzwerk)');
+        const security = String(net.security ?? '').trim();
+        const isOpen = !security || security.toLowerCase() === 'open' || security === '--';
+        const connected = net.in_use === true;
+        const classes = ['network-item'];
+        if (connected) classes.push('connected');
+        else if (ssid === selected) classes.push('selected');
+        return `
+            <button type="button" class="${classes.join(' ')}" ${connected ? 'aria-disabled="true"' : `onclick="selectNetwork(${index})"`}>
+                <span class="network-name">${escapeHtml(ssid)}</span>
+                <span class="network-meta">
+                    ${connected ? '<span class="connected-label">Verbunden</span>' : ''}
+                    ${isOpen ? 'Offen' : '<svg class="icon" style="width:14px;height:14px" aria-label="Verschlüsselt"><use href="#i-lock"/></svg>'}
+                    ${signalToBars(net.signal)}
+                </span>
+            </button>
+        `;
+    }).join('');
+}
+
 function selectNetwork(index) {
     const network = currentNetworks[index];
-
     if (!network || !network.ssid) {
         showToast('Netzwerk konnte nicht ausgewählt werden', 'error');
         return;
     }
-
     document.getElementById('manualSsid').value = network.ssid;
-    document.getElementById('manualPass').value = '';
-    document.getElementById('manualPass').focus();
-
-    // Toast verwendet textContent; deshalb hier nicht HTML-escapen.
-    showToast(`„${network.ssid}“ ausgewählt`, 'info');
+    const pass = document.getElementById('manualPass');
+    pass.value = '';
+    pass.focus();
+    document.querySelectorAll('#networkList .network-item').forEach((el, i) => {
+        el.classList.toggle('selected', i === index && !el.classList.contains('connected'));
+    });
 }
 
-// WLAN suchen
 async function scanNetworks() {
     setButtonLoading('scanBtn', 'scanSpinner', 'scanLabel', true);
-
     try {
         await apiPost('/api/wifi/scan', {});
         await loadState();
         showToast('Netzwerksuche abgeschlossen', 'success');
     } catch (error) {
-        showToast('Scan fehlgeschlagen: ' + error.message, 'error');
+        showToast('Suche fehlgeschlagen: ' + error.message, 'error');
     } finally {
         setButtonLoading('scanBtn', 'scanSpinner', 'scanLabel', false);
     }
 }
 
-// Manuell mit einem WLAN verbinden
+const autodartsLocalButton = label =>
+    `<div style="margin-top:14px;text-align:center;"><a href="http://autodarts.local" class="btn btn-secondary btn-sm">${label}</a></div>`;
+
 async function connectManual(event) {
     event.preventDefault();
 
     const ssid = document.getElementById('manualSsid').value.trim();
     const password = document.getElementById('manualPass').value;
-
     if (!ssid) {
-        showToast('Bitte eine SSID eingeben', 'error');
+        showToast('Bitte einen Netzwerknamen eingeben', 'error');
         return;
     }
 
     setButtonLoading('connectBtn', 'connectSpinner', 'connectLabel', true);
-
     const isHotspot = isHotspotActive || window.location.hostname === '192.168.4.1';
 
     if (isHotspot) {
         showWifiModal(
-            'Verbindung wird hergestellt…',
-            `Das WLAN-Profil für <strong>„${escapeHtml(ssid)}“</strong> wird eingerichtet.<br><br>` +
-            `⚠️ <strong>Wichtiger Hinweis:</strong><br>` +
-            `Der Einrichtungs-Hotspot wird jetzt beendet, damit sich die Box mit deinem Heimnetzwerk verbinden kann.<br><br>` +
-            `Bitte verbinde dieses Gerät gleich wieder mit <strong>„${escapeHtml(ssid)}“</strong> und rufe danach auf:<br>` +
-            `<div style="margin-top:12px;text-align:center;"><a href="http://autodarts.local" style="color:#38bdf8;font-weight:600;font-size:16px;">http://autodarts.local</a></div>`,
+            'WLAN wird eingerichtet …',
+            `Die Box verbindet sich mit <strong>„${escapeHtml(ssid)}“</strong> und beendet dafür den Setup-Hotspot.<br><br>` +
+            `Verbinde dieses Gerät gleich wieder mit <strong>„${escapeHtml(ssid)}“</strong> und öffne danach ` +
+            `<a href="http://autodarts.local">http://autodarts.local</a>.`,
             true,
             false
         );
     }
 
     try {
-        const result = await apiPost('/api/wifi/connect', {
-            ssid,
-            password
-        });
-
+        const result = await apiPost('/api/wifi/connect', { ssid, password });
         if (isHotspot) {
             showWifiModal(
-                'WLAN-Daten gespeichert! 🚀',
-                `Die Konfiguration für <strong>„${escapeHtml(ssid)}“</strong> wurde erfolgreich gespeichert!<br><br>` +
-                `Die Box schaltet nun auf dein Heimnetzwerk um.<br><br>` +
-                `1. Verbinde dieses Gerät wieder mit <strong>„${escapeHtml(ssid)}“</strong>.<br>` +
-                `2. Die Seite leitet automatisch weiter, sobald die Box erreichbar ist.<br><br>` +
-                `<div style="margin-top:14px;text-align:center;"><a href="http://autodarts.local" class="btn-small btn-primary" style="display:inline-block;padding:10px 18px;text-decoration:none;">http://autodarts.local öffnen</a></div>`,
+                'WLAN gespeichert',
+                `Die Box schaltet jetzt auf <strong>„${escapeHtml(ssid)}“</strong> um.<br><br>` +
+                `Verbinde dieses Gerät wieder mit <strong>„${escapeHtml(ssid)}“</strong> – die Seite lädt automatisch, sobald die Box erreichbar ist.` +
+                autodartsLocalButton('http://autodarts.local öffnen'),
                 true,
                 true
             );
@@ -1423,13 +794,12 @@ async function connectManual(event) {
         // fetch() wirft TypeError nur bei Netzwerkabbruch; HTTP-Fehler (z. B. Passwort
         // zu kurz) kommen als normaler Error von apiPost und werden angezeigt.
         if (isHotspot && error instanceof TypeError) {
-            // Im Hotspot-Modus bricht die Verbindung planmäßig ab, sobald das WLAN-Radio umschaltet
+            // Im Hotspot-Modus bricht die Verbindung planmäßig ab, sobald das WLAN umschaltet.
             showWifiModal(
-                'WLAN wird umgeschaltet 📶',
-                `Der Hotspot wurde planmäßig beendet, während sich die Box mit <strong>„${escapeHtml(ssid)}“</strong> verbindet.<br><br>` +
-                `1. Verbinde dein Gerät wieder mit deinem WLAN <strong>„${escapeHtml(ssid)}“</strong>.<br>` +
-                `2. Die Seite leitet automatisch weiter, sobald die Box erreichbar ist.<br><br>` +
-                `<div style="margin-top:14px;text-align:center;"><a href="http://autodarts.local" class="btn-small btn-primary" style="display:inline-block;padding:10px 18px;text-decoration:none;">http://autodarts.local öffnen</a></div>`,
+                'WLAN wird umgeschaltet',
+                `Der Setup-Hotspot wurde beendet, während sich die Box mit <strong>„${escapeHtml(ssid)}“</strong> verbindet.<br><br>` +
+                `Verbinde dein Gerät wieder mit <strong>„${escapeHtml(ssid)}“</strong> – die Seite lädt automatisch, sobald die Box erreichbar ist.` +
+                autodartsLocalButton('http://autodarts.local öffnen'),
                 true,
                 true
             );
@@ -1443,7 +813,6 @@ async function connectManual(event) {
     }
 }
 
-// Automatisches Neuladen von autodarts.local nach Wechsel
 function startAutoReloadPolling(ssid) {
     let attempts = 0;
     const maxAttempts = 90;
@@ -1459,96 +828,52 @@ function startAutoReloadPolling(ssid) {
                 mode: 'cors'
             });
             clearTimeout(timeoutId);
-
             if (res.ok) {
                 clearInterval(interval);
                 showWifiModal(
-                    'Erfolgreich verbunden! 🎉',
-                    'Die Autodarts-Box ist im Heimnetzwerk erreichbar.<br><br>' +
-                    '<div style="color:#4ade80;font-weight:600;font-size:16px;">Lade http://autodarts.local…</div>',
+                    'Erfolgreich verbunden!',
+                    'Die Box ist jetzt in deinem Heimnetz erreichbar.<br><strong style="color:#4ade80;">http://autodarts.local wird geladen …</strong>',
                     true,
                     false
                 );
-                setTimeout(() => {
-                    window.location.href = 'http://autodarts.local';
-                }, 1000);
+                setTimeout(() => { window.location.href = 'http://autodarts.local'; }, 1000);
                 return;
             }
         } catch (_) {}
 
-        const msgEl = document.getElementById('wifiModalMessage');
-        if (msgEl) {
-            msgEl.innerHTML =
-                `1. Verbinde dein Endgerät wieder mit deinem WLAN <strong>„${escapeHtml(ssid)}“</strong>.<br><br>` +
-                `Warte auf Verbindung im Heimnetzwerk… (Versuch ${attempts})<br>` +
-                `<small style="color:#94a3b8;">Sobald dein Gerät im WLAN ist, lädt die Seite automatisch.</small><br><br>` +
-                `<div style="text-align:center;"><a href="http://autodarts.local" class="btn-small btn-primary" style="display:inline-block;padding:10px 18px;text-decoration:none;">Jetzt manuell öffnen</a></div>`;
-        }
+        document.getElementById('wifiModalMessage').innerHTML =
+            `Verbinde dieses Gerät wieder mit <strong>„${escapeHtml(ssid)}“</strong>. ` +
+            `Die Seite lädt automatisch, sobald die Box im Heimnetz erreichbar ist.<br>` +
+            `<small style="color:#94a3b8;">Warte auf Verbindung … (Versuch ${attempts})</small>` +
+            autodartsLocalButton('Jetzt manuell öffnen');
 
-        if (attempts >= maxAttempts) {
-            clearInterval(interval);
-        }
+        if (attempts >= maxAttempts) clearInterval(interval);
     }, 2000);
 }
 
-// Setup-Hotspot starten
+// --- Setup-Hotspot ---
+const hotspotHint =
+    'Verbinde dein Handy oder Notebook mit dem WLAN<br>' +
+    '<strong>Autodarts-Setup</strong> (Passwort <strong>autodarts123</strong>)<br>' +
+    'und öffne danach <a href="http://autodarts.local">http://autodarts.local</a>.';
+
 async function startHotspot() {
-    setButtonLoading(
-        'hotspotStartBtn',
-        'hotspotStartSpinner',
-        'hotspotStartLabel',
-        true
-    );
-
+    setButtonLoading('hotspotStartBtn', 'hotspotStartSpinner', 'hotspotStartLabel', true);
     try {
-        const result = await apiPost('/api/wifi/hotspot/start', {
-            ssid: 'Autodarts-Setup',
-            password: 'autodarts123'
-        });
-
-        showToast(result.message || 'Hotspot wird gestartet…', 'success');
-        showWifiModal(
-            'Hotspot wird gestartet… 📡',
-            'Der Einrichtungs-Hotspot <strong>„Autodarts-Setup“</strong> wird jetzt aktiviert.<br><br>' +
-            'Bitte verbinde dein Endgerät mit dem WLAN:<br>' +
-            '<strong>Netzwerkname:</strong> Autodarts-Setup<br>' +
-            '<strong>Passwort:</strong> autodarts123<br><br>' +
-            'Rufe danach <a href="http://autodarts.local" style="color:#38bdf8;font-weight:600;">http://autodarts.local</a> auf.',
-            false,
-            true
-        );
+        await apiPost('/api/wifi/hotspot/start', { ssid: 'Autodarts-Setup', password: 'autodarts123' });
+        showWifiModal('Setup-Hotspot wird gestartet', hotspotHint, false, true);
         await loadState();
     } catch (error) {
-        // Falls die Verbindung durch den Funkwechsel vor Erhalt der HTTP-Response abbricht:
-        showWifiModal(
-            'Hotspot aktiviert 📡',
-            'Der Einrichtungs-Hotspot <strong>„Autodarts-Setup“</strong> wurde gestartet.<br><br>' +
-            'Bitte verbinde dein Endgerät mit dem WLAN:<br>' +
-            '<strong>Netzwerkname:</strong> Autodarts-Setup<br>' +
-            '<strong>Passwort:</strong> autodarts123<br><br>' +
-            'Rufe danach <a href="http://autodarts.local" style="color:#38bdf8;font-weight:600;">http://autodarts.local</a> auf.',
-            false,
-            true
-        );
+        // Die Verbindung kann durch den Funkwechsel vor der Antwort abbrechen.
+        showWifiModal('Setup-Hotspot gestartet', hotspotHint, false, true);
     } finally {
-        setButtonLoading(
-            'hotspotStartBtn',
-            'hotspotStartSpinner',
-            'hotspotStartLabel',
-            false
-        );
+        setButtonLoading('hotspotStartBtn', 'hotspotStartSpinner', 'hotspotStartLabel', false);
     }
 }
 
-// Setup-Hotspot stoppen
 async function stopHotspot() {
-    setButtonLoading(
-        'hotspotStopBtn',
-        'hotspotStopSpinner',
-        'hotspotStopLabel',
-        true
-    );
-
+    setButtonLoading('hotspotStopBtn', 'hotspotStopSpinner', 'hotspotStopLabel', true);
+    const stoppedText = 'Der Setup-Hotspot ist aus. Verbinde dein Gerät wieder mit deinem Heim-WLAN oder nutze das LAN.';
     try {
         let connName = 'autodarts-hotspot-Autodarts-Setup';
         try {
@@ -1558,96 +883,56 @@ async function stopHotspot() {
             if (found) connName = found.name;
         } catch (_) {}
 
-        const result = await apiPost('/api/wifi/hotspot/stop', {
-            connection_name: connName
-        });
-
-        showToast(result.message || 'Hotspot wird beendet', 'success');
-        showWifiModal(
-            'Hotspot wird beendet ⏹️',
-            'Der Einrichtungs-Hotspot wird beendet.<br><br>' +
-            'Die Box trennt den Hotspot. Bitte verbinde dein Endgerät wieder mit deinem Heim-WLAN oder nutze Ethernet.',
-            false,
-            true
-        );
+        await apiPost('/api/wifi/hotspot/stop', { connection_name: connName });
+        showWifiModal('Setup-Hotspot wird beendet', stoppedText, false, true);
         await loadState();
     } catch (error) {
-        // Falls die Verbindung beim Abschalten des APs vor Erhalt der Response abbricht:
-        showWifiModal(
-            'Hotspot beendet ⏹️',
-            'Der Einrichtungs-Hotspot wurde beendet.<br><br>' +
-            'Die Box hat den Hotspot getrennt. Bitte verbinde dein Endgerät wieder mit deinem regulären Netzwerk.',
-            false,
-            true
-        );
+        // Die Verbindung kann beim Abschalten vor der Antwort abbrechen.
+        showWifiModal('Setup-Hotspot beendet', stoppedText, false, true);
     } finally {
-        setButtonLoading(
-            'hotspotStopBtn',
-            'hotspotStopSpinner',
-            'hotspotStopLabel',
-            false
-        );
+        setButtonLoading('hotspotStopBtn', 'hotspotStopSpinner', 'hotspotStopLabel', false);
     }
 }
 
-// Übergabe bestätigen
+// --- Gerät übergeben ---
 function confirmHandover() {
-    const confirmed = confirm(
-        'Wirklich alle WLAN-Zugangsdaten (autodarts-*) löschen?\n' +
-        'Ethernet und Autodarts-Daten sollen erhalten bleiben.\n\n' +
-        'Das Gerät wird für die Übergabe vorbereitet.'
-    );
-
-    if (confirmed) {
-        doHandover();
-    }
+    showDialog('handoverOverlay');
 }
 
-// WLAN-Daten für die Übergabe löschen
 async function doHandover() {
     const button = document.getElementById('handoverBtn');
-    const originalText = button.textContent;
-
+    const originalHtml = button.innerHTML;
     button.disabled = true;
-    button.innerHTML = '<span class="spinner"></span><span>Wird ausgeführt …</span>';
-
+    button.innerHTML = '<span class="spinner sm"></span><span>Wird gelöscht …</span>';
     try {
         const result = await apiPost('/api/wifi/handover', {});
-
-        showToast(result.message || 'Übergabe wurde angefordert', 'success');
+        showToast(result.message || 'WLAN-Zugangsdaten gelöscht', 'success');
         await loadState();
     } catch (error) {
-        showToast('Übergabe fehlgeschlagen: ' + error.message, 'error');
+        showToast('Löschen fehlgeschlagen: ' + error.message, 'error');
     } finally {
         button.disabled = false;
-        button.textContent = originalText;
+        button.innerHTML = originalHtml;
     }
 }
 
-// System- & Dienst-Protokolle (Diagnose)
+// --- Protokolle ---
 let currentLogTarget = 'app';
 
 function formatLogs(rawText) {
     if (!rawText || !rawText.trim()) {
-        return '<span style="color:#64748b;">(Keine Protokolleinträge vorhanden)</span>';
+        return '<span class="log-empty">(Keine Protokolleinträge vorhanden)</span>';
     }
-
-    // 1. Redundante eingebettete HTTP-Zeitstempel herausfiltern:
-    // z. B. ' - - [17/Oct/2026 00:35:40] ' -> ' - '
+    // Eingebettete HTTP-Zeitstempel wie ' - - [17/Oct/2026 00:35:40] ' entfernen.
     const cleaned = rawText.trim().replace(
         /\s*-\s*-\s*\[\d{1,2}\/(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\/\d{4}[\s:]\d{2}:\d{2}:\d{2}(?:\s*[+-]\d{4})?\]\s*/g,
         ' - '
     );
-
-    // 2. Abschließende Bindestriche am Zeilenende entfernen (z. B. bei HTTP-Access-Logs '... 200 -' -> '... 200'):
+    // Abschließende Bindestriche von Access-Logs entfernen ('... 200 -' -> '... 200').
     const trimmed = cleaned.replace(/[ \t]+-[ \t]*(?=\r?\n|$)/g, '');
-
     const escaped = escapeHtml(trimmed);
-
-    // 3. Führende Zeitstempel am Zeilenanfang farblich hervorheben:
-    // Syslog / journalctl (z. B. 'Oct 17 00:26:29') oder ISO-8601 (z. B. '2026-10-17 00:26:29')
+    // Zeitstempel am Zeilenanfang hervorheben (Syslog oder ISO-8601).
     const timestampRegex = /(^|\n)((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}(?:\.\d+)?|\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)/g;
-
     return escaped.replace(timestampRegex, '$1<span class="log-timestamp">$2</span>');
 }
 
@@ -1662,93 +947,78 @@ async function switchLogTab(target) {
 async function fetchLogs() {
     const viewer = document.getElementById('logViewer');
     const spinner = document.getElementById('logSpinner');
-    const lines = 100;
-
-    if (spinner) spinner.classList.remove('hidden');
-    if (viewer) viewer.style.opacity = '0.6';
-
+    spinner.classList.remove('hidden');
+    viewer.style.opacity = '0.6';
     try {
-        const data = await apiGet(`/api/system/logs?target=${encodeURIComponent(currentLogTarget)}&lines=${encodeURIComponent(lines)}`);
+        const data = await apiGet(`/api/system/logs?target=${encodeURIComponent(currentLogTarget)}&lines=100`);
         if (data.status === 'ok') {
             viewer.innerHTML = formatLogs(data.logs);
             viewer.scrollTop = viewer.scrollHeight;
         } else {
-            viewer.innerHTML = '<span style="color:#f87171;">Fehler beim Laden: ' + escapeHtml(data.error || 'Unbekannt') + '</span>';
+            viewer.innerHTML = '<span class="log-error">Fehler beim Laden: ' + escapeHtml(data.error || 'Unbekannt') + '</span>';
         }
     } catch (err) {
-        viewer.innerHTML = '<span style="color:#f87171;">Verbindungsfehler beim Laden der Protokolle: ' + escapeHtml(err.message) + '</span>';
+        viewer.innerHTML = '<span class="log-error">Protokolle konnten nicht geladen werden: ' + escapeHtml(err.message) + '</span>';
     } finally {
-        if (spinner) spinner.classList.add('hidden');
-        if (viewer) viewer.style.opacity = '1';
+        spinner.classList.add('hidden');
+        viewer.style.opacity = '1';
     }
 }
 
-function triggerTitleRepaint() {
-    const title = document.querySelector('.page-title');
-    if (title) {
-        title.style.transform = 'translateZ(0)';
-        void title.offsetHeight;
-        requestAnimationFrame(() => {
-            title.style.transform = '';
-        });
-    }
-}
-
-// Autodarts-Dienst (Experten-Werkzeuge)
+// --- Autodarts ---
 async function loadAutodartsInfo() {
     const version = document.getElementById('adVersionValue');
     const service = document.getElementById('adServiceValue');
     const bm = document.getElementById('adBoardManagerValue');
+    const notice = document.getElementById('adAutostartNotice');
     try {
         const status = await apiGet('/api/autodarts');
         if (!status.installed) {
             version.textContent = 'Nicht installiert';
             service.textContent = '–';
             bm.textContent = '–';
+            notice.style.display = 'none';
             return;
         }
         version.textContent = status.version || 'Unbekannt';
         const svc = status.service || {};
         const enabled = svc.enabled === 'enabled' || svc.enabled === 'enabled-runtime';
         service.textContent = enabled
-            ? (svc.active === 'active' ? 'Aktiv, startet beim Booten' : 'Eingerichtet (' + (svc.active || 'unbekannt') + ')')
+            ? (svc.active === 'active' ? 'Aktiv' : 'Eingerichtet (' + (svc.active || 'unbekannt') + ')')
             : 'Nicht eingerichtet';
         bm.textContent = status.board_manager_reachable
             ? 'Erreichbar (Port ' + status.board_manager_port + ')'
             : 'Nicht erreichbar';
+        // Der Knopf wird nur gebraucht, wenn der Autostart fehlt.
+        notice.style.display = enabled ? 'none' : 'flex';
     } catch (error) {
         version.textContent = 'Nicht abrufbar';
         service.textContent = '–';
         bm.textContent = '–';
+        notice.style.display = 'none';
     }
 }
 
 async function adminSetupAutostart() {
+    const btn = document.getElementById('adAutostartBtn');
+    btn.disabled = true;
     try {
         const result = await apiPost('/api/autodarts/autostart', {});
-        showToast(result.changed ? 'Autostart eingerichtet' : 'Autostart ist aktiv', 'success');
+        if (result.ok === false) throw new Error(result.reason || 'unbekannter Fehler');
+        showToast('Autostart eingerichtet', 'success');
     } catch (error) {
         showToast('Autostart fehlgeschlagen: ' + error.message, 'error');
+    } finally {
+        btn.disabled = false;
+        loadAutodartsInfo();
     }
-    loadAutodartsInfo();
 }
 
-// Initialisierung
-document.addEventListener('DOMContentLoaded', () => {
-    loadState();
-    loadAutodartsInfo();
-    fetchLogs();
-    alignNetworkButtons();
-    triggerTitleRepaint();
-    window.addEventListener('resize', alignNetworkButtons);
-
-    // Status regelmäßig aktualisieren.
-    setInterval(loadState, 10000);
-});
-
-window.addEventListener('load', () => {
-    triggerTitleRepaint();
-});
+// --- Start ---
+loadState();
+loadAutodartsInfo();
+fetchLogs();
+setInterval(loadState, 10000);
 </script>
 </body>
 </html>

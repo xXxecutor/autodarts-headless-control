@@ -215,6 +215,13 @@ class TestAutostartEndpoint(unittest.TestCase):
         handler.do_GET()
         self.assertEqual(handler.status, 200)
 
+    def test_shared_stylesheet_is_served(self):
+        # Start- und Admin-Seite laden ihre gemeinsame Gestaltung von hier.
+        handler = self._handler("GET", "/static/ui.css")
+        handler.do_GET()
+        self.assertEqual(handler.status, 200)
+        self.assertIn(b"--surface", handler.wfile.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

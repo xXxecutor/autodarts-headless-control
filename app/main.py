@@ -37,6 +37,10 @@ _wifi_manager_service = WifiManagerService()
 _network_watchdog = NetworkWatchdog(_wifi_manager_service)
 
 STATIC_FILES = {
+    "/static/ui.css": (
+        "ui.css",
+        "text/css; charset=utf-8",
+    ),
     "/static/xterm.js": (
         "xterm.js",
         "application/javascript; charset=utf-8",

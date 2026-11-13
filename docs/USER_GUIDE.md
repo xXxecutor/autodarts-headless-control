@@ -33,10 +33,9 @@ Du hast eine fertig eingerichtete Autodarts-Box erhalten. Du brauchst **keinen M
    * **Passwort:** `autodarts123`
 5. Öffne nach erfolgreicher Verbindung deinen Webbrowser und rufe auf:
    👉 **`http://autodarts.local`** (Ersatzadresse falls mDNS nicht reagiert: `http://192.168.4.1`)
-6. Gehe in den Bereich **WLAN-Einstellungen** (oder Menü **Admin**):
-   * Tippe auf **Netzwerke suchen**.
-   * Wähle dein Heim-WLAN aus der Liste aus.
-   * Gib dein WLAN-Passwort ein und tippe auf **Verbinden**.
+6. Auf der Startseite öffnet sich automatisch das Fenster **WLAN einrichten**:
+   * Wähle dein Heim-WLAN aus der Liste aus (fehlt es, tippe auf **Neu suchen**).
+   * Gib dein WLAN-Passwort ein und tippe auf **Mit diesem WLAN verbinden**.
 7. Die Box speichert die Zugangsdaten und verbindet sich mit deinem Heim-WLAN. Der temporäre Einrichtungs-Hotspot schaltet sich automatisch ab.
 8. Verbinde dein Smartphone/Tablet wieder mit deinem normalen Heim-WLAN.
 
@@ -89,7 +88,7 @@ sudo reboot
 
 ### Schritt 3: Erstinbetriebnahme & Board-Kalibrierung
 1. Rufe im Browser an einem beliebigen Gerät im selben Netzwerk `http://autodarts.local` auf.
-2. Klicke auf **„Board einrichten (Board-Manager)“**. Der offizielle Autodarts Board-Manager öffnet sich in einem neuen Tab.
+2. Klicke auf **„Board einrichten“**. Der offizielle Autodarts Board-Manager öffnet sich in einem neuen Tab.
 3. Melde das Board an deinem Autodarts-Konto an, ordne die Kameras zu und kalibriere das Board.
 4. Fertig! Autodarts wurde automatisch als Hintergrunddienst eingerichtet und startet bei jedem Einschalten von selbst. Gespielt wird auf **play.autodarts.com**.
 
@@ -110,16 +109,16 @@ Du möchtest einem Freund oder Vereinskollegen eine fertig aufgebaute Autodarts-
 Bevor du das Gerät einpackst:
 1. Öffne an deinem PC oder Handy die Admin-Oberfläche der Box:
    👉 **`http://autodarts.local/admin`**
-2. Gehe zum Bereich **„Gerät übergeben / WLAN zurücksetzen“**.
-3. Klicke auf den roten Button **„WLAN-Daten löschen & Handover vorbereiten“** und bestätige die Abfrage.
+2. Gehe zum Bereich **„Gerät übergeben“**.
+3. Klicke auf den roten Button **„WLAN-Zugangsdaten löschen“** und bestätige mit **„Löschen“**.
 4. **Was das System jetzt tut:**
    * ✅ Alle über die Weboberfläche gespeicherten WLAN-Verbindungen (`autodarts-*`) werden rückstandsfrei gelöscht.
    * 🛡️ Die Autodarts-Installation, Board-Kalibrierung, Kamera-Einstellungen und das Betriebssystem bleiben zu 100 % erhalten.
    * 🔄 Das Gerät bereitet sich darauf vor, beim nächsten Start beim Empfänger automatisch den Einrichtungs-Hotspot (`Autodarts-Setup`) zu starten, da kein bekanntes WLAN mehr hinterlegt ist.
 
 ### Schritt 3: Herunterfahren & Übergeben
-1. Klicke in der Weboberfläche auf **Herunterfahren**.
-2. Sobald die LEDs am Mini-PC erloschen sind, ziehe das Netzteil ab.
+1. Tippe auf der Startseite oben rechts auf das **Ein/Aus-Symbol** (Herunterfahren) und bestätige.
+2. Sobald „System ist aus“ erscheint und die LEDs am Gerät erloschen sind, ziehe das Netzteil ab.
 3. Gib dem Empfänger die Box zusammen mit dem Abschnitt **[Rolle 1: Empfänger / Neuer Nutzer](#-rolle-1-empfänger--neuer-nutzer-fertige-box-erhalten)** an die Hand.
 
 ---

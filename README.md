@@ -29,7 +29,7 @@ Das ausführliche Schritt-für-Schritt-Handbuch findest du in der **[Benutzeranl
 
 * **🎯 1. Empfänger (Fertige Box erhalten):** Strom anschließen. Bei LAN sofort loslegen; bei WLAN mit dem Hotspot `Autodarts-Setup` (PW: `autodarts123`) verbinden, unter `http://autodarts.local` das Heim-WLAN auswählen und spielen.
 * **🛠️ 2. Selbsteinrichter (Eigenes Gerät aufbauen):** Ein 64-Bit-Linux installieren (z. B. Raspberry Pi OS, Debian, Ubuntu, Fedora, Arch oder openSUSE), den Installations-Einzeiler ausführen, neu starten und das Board im Board-Manager einrichten.
-* **🎁 3. Vorbereiter (Box für Freunde einrichten):** System komplett vorbereiten und testen, dann unter `http://autodarts.local/admin` im Bereich **„Gerät übergeben / WLAN zurücksetzen“** auf **„WLAN-Daten löschen & Handover vorbereiten“** klicken (löscht private WLAN-Passwörter, behält aber die Autodarts-Installation und Board-Kalibrierung), herunterfahren und übergeben.
+* **🎁 3. Vorbereiter (Box für Freunde einrichten):** System komplett vorbereiten und testen, dann unter `http://autodarts.local/admin` im Bereich **„Gerät übergeben“** auf **„WLAN-Zugangsdaten löschen“** klicken (löscht private WLAN-Passwörter, behält aber die Autodarts-Installation und Board-Kalibrierung), herunterfahren und übergeben.
 
 ---
 
