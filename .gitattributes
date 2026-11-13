@@ -1,0 +1,7 @@
+# Einheitlich LF im Repository. Skripte, Units und Debian-Metadaten laufen auf
+# Linux und müssen auch nach einem Checkout unter Windows LF behalten.
+* text=auto eol=lf
+*.sh text eol=lf
+installer/** text eol=lf
+debian/** text eol=lf
+packaging/** text eol=lf

@@ -1,0 +1,1 @@
+autodarts ALL=(root) NOPASSWD: /usr/sbin/reboot, /usr/sbin/poweroff

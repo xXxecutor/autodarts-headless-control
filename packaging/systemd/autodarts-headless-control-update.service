@@ -1,0 +1,12 @@
+[Unit]
+Description=Update Autodarts Headless Control to the latest release
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/autodarts-headless-control/installer/self-update.sh
+# Das Update startet den Webdienst neu; der Updater selbst darf dabei nicht beendet werden.
+KillMode=process
+StandardOutput=journal
+StandardError=journal

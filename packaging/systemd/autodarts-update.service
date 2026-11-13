@@ -1,0 +1,16 @@
+[Unit]
+Description=Check for Autodarts updates
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=autodarts
+Group=autodarts
+Environment=HOME=/var/lib/autodarts-headless-control
+# %U = UID von User=: "autodarts update" stoppt/startet den User-Dienst via systemctl --user.
+Environment=XDG_RUNTIME_DIR=/run/user/%U
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/var/lib/autodarts-headless-control/.local/bin
+ExecStart=/var/lib/autodarts-headless-control/.local/bin/autodarts update
+StandardOutput=journal
+StandardError=journal

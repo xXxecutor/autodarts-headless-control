@@ -1,0 +1,47 @@
+[Unit]
+Description=Autodarts Headless Control Web Interface
+After=network-online.target avahi-daemon.service
+Wants=network-online.target avahi-daemon.service
+
+[Service]
+Type=simple
+User=autodarts
+Group=autodarts
+WorkingDirectory=/opt/autodarts-headless-control
+EnvironmentFile=/etc/autodarts-headless-control.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/autodarts-headless-control/.venv/bin/python -m app.main
+Restart=on-failure
+RestartSec=3
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+# read-only statt true: /run/user/<uid> muss erreichbar bleiben, sonst
+# kann "Autodarts neu starten" den User-Dienst (systemctl --user) nicht steuern.
+ProtectHome=read-only
+# Home des Dienstbenutzers beschreibbar lassen (Autodarts-Autostart, Update, TUI).
+ReadWritePaths=/var/lib/autodarts-headless-control
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+# Permit binding to privileged ports without running as root.
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+# Nur lokale Netze (LAN, Hotspot) und localhost
+IPAddressDeny=any
+IPAddressAllow=localhost
+IPAddressAllow=192.168.0.0/16
+IPAddressAllow=10.0.0.0/8
+IPAddressAllow=172.16.0.0/12
+
+[Install]
+WantedBy=multi-user.target

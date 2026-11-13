@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -e
+
+# Die eigentliche Einrichtung teilt sich das Paket mit install.sh
+# (andere Distributionen): /opt/autodarts-headless-control/installer/setup.sh
+
+case "$1" in
+    configure)
+        /opt/autodarts-headless-control/installer/setup.sh configure --mode deb
+        ;;
+    abort-upgrade|abort-remove|abort-deconfigure)
+        ;;
+    *)
+        ;;
+esac
+
+exit 0

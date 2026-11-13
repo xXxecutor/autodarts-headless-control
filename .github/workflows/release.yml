@@ -1,0 +1,50 @@
+name: Release
+
+# Erstellt bei einem Versions-Tag (z. B. "git tag v1.0.0 && git push origin v1.0.0")
+# ein GitHub-Release mit .deb-Paket, Quellarchiv und Installer. Installierte
+# Geräte übernehmen neue Versionen automatisch (täglicher Update-Timer).
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Tests
+        run: |
+          pip install -e .
+          python -m unittest discover -s tests
+
+      - name: Paket bauen
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          # Die Version kommt ausschließlich aus dem Tag – pyproject.toml muss
+          # dafür nicht von Hand angepasst werden.
+          sed -i "s/^version[[:space:]]*=.*/version = \"${VERSION}\"/" pyproject.toml
+          bash installer/build-deb.sh "$VERSION"
+          # Fester Dateiname für ".../releases/latest/download/..." (Einzeiler-Installation)
+          cp "dist/autodarts-headless-control_${VERSION}_all.deb" dist/autodarts-headless-control_latest_all.deb
+          cp installer/install.sh dist/install.sh
+          # Quellarchiv für Distributionen ohne apt (Fedora, Arch, openSUSE, ...)
+          git ls-files -z | tar --null -T - --transform 's,^,autodarts-headless-control/,' \
+            -czf "dist/autodarts-headless-control_${VERSION}_src.tar.gz"
+          cp "dist/autodarts-headless-control_${VERSION}_src.tar.gz" dist/autodarts-headless-control_latest_src.tar.gz
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          files: |
+            dist/autodarts-headless-control_*_all.deb
+            dist/autodarts-headless-control_*_src.tar.gz
+            dist/install.sh
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}

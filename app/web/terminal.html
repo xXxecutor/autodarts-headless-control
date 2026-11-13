@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="de">
+<head>
+
+<meta charset="utf-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1">
+
+<title>Autodarts Terminal Test</title>
+
+<link rel="stylesheet"
+      href="/static/xterm.css">
+
+<style>
+
+html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #111;
+}
+
+#terminal {
+    width: 100%;
+    height: 100%;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="terminal"></div>
+
+<script src="/static/xterm.js"></script>
+<script src="/static/xterm-addon-fit.js"></script>
+
+<script>
+
+const term = new Terminal({
+    cursorBlink: true,
+    fontSize: 14,
+    scrollback: 2000
+});
+
+const fitAddon = new FitAddon.FitAddon();
+
+term.loadAddon(fitAddon);
+
+term.open(
+    document.getElementById("terminal")
+);
+
+function fitTerminal() {
+
+    const container = document.getElementById("terminal");
+
+    if (!container.clientWidth || !container.clientHeight) {
+        return;
+    }
+
+    const minCols = 110;
+    const minRows = 38;
+
+    let fontSize = 14;
+
+    while (fontSize >= 5) {
+
+        term.options.fontSize = fontSize;
+
+        fitAddon.fit();
+
+        if (term.cols >= minCols && term.rows >= minRows) {
+            break;
+        }
+
+        fontSize -= 1;
+    }
+
+    fitAddon.fit();
+}
+
+const ws = new WebSocket(
+    "ws://" + location.hostname + ":8092"
+);
+
+window.addEventListener("beforeunload", function () {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.close();
+    }
+});
+
+function sendResize() {
+
+    if (ws.readyState !== WebSocket.OPEN) {
+        return;
+    }
+
+    fitTerminal();
+
+    ws.send(
+        "RESIZE:" +
+        term.cols +
+        ":" +
+        term.rows
+    );
+}
+
+ws.onopen = () => {
+
+    sendResize();
+
+    term.focus();
+};
+
+ws.onmessage = event => {
+
+    term.write(event.data);
+};
+
+ws.onclose = () => {
+
+    term.write(
+        "\r\n\r\nVerbindung beendet.\r\n"
+    );
+};
+
+ws.onerror = () => {
+
+    term.write(
+        "\r\n\r\nWebSocket-Fehler.\r\n"
+    );
+};
+
+term.onData(data => {
+
+    if (ws.readyState === WebSocket.OPEN) {
+        ws.send(data);
+    }
+
+});
+
+window.addEventListener(
+    "resize",
+    sendResize
+);
+
+</script>
+
+</body>
+</html>

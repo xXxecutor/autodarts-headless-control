@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -e
+
+reload_systemd() {
+    if [ -d /run/systemd/system ]; then
+        systemctl daemon-reload 2>/dev/null || true
+    fi
+}
+
+case "$1" in
+    purge)
+        # Von postinst erzeugte Dateien entfernen (Paketdateien entfernt dpkg selbst).
+        rm -rf /opt/autodarts-headless-control/.venv 2>/dev/null || true
+        find /opt/autodarts-headless-control -name '*.egg-info' -prune -exec rm -rf {} + 2>/dev/null || true
+        rmdir /opt/autodarts-headless-control 2>/dev/null || true
+        rm -rf /var/lib/autodarts-headless-control-firewall 2>/dev/null || true
+        reload_systemd
+        if [ -d /run/systemd/system ]; then
+            systemctl try-restart avahi-daemon 2>/dev/null || true
+        fi
+        # /var/lib/autodarts-headless-control bleibt erhalten: Dort liegen die
+        # Autodarts-Installation, Board-Konfiguration und Kalibrierung.
+        ;;
+    remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
+        reload_systemd
+        ;;
+    *)
+        ;;
+esac
+
+exit 0

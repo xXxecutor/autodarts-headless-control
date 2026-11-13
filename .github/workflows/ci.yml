@@ -1,0 +1,263 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+    tags-ignore: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Tests (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install package
+        run: pip install -e .
+
+      - name: Unit tests (inkl. Firewall-Skripte und PTY)
+        run: python -m unittest discover -s tests -v
+
+  shell:
+    name: Shell-Skripte prüfen
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: bash -n
+        run: |
+          for f in installer/*.sh installer/autodarts-firewall-sync installer/90-autodarts-firewall debian/postinst debian/prerm debian/postrm; do
+            bash -n "$f" && echo "ok  $f"
+          done
+      - name: shellcheck (nur Fehler)
+        run: |
+          shellcheck -S error installer/*.sh installer/autodarts-firewall-sync \
+            installer/90-autodarts-firewall debian/postinst debian/prerm debian/postrm
+
+  package:
+    name: .deb bauen
+    needs: [tests, shell]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build
+        run: bash installer/build-deb.sh
+      - name: Paketinhalt
+        run: |
+          dpkg-deb --info dist/*.deb
+          dpkg-deb --contents dist/*.deb
+      - uses: actions/upload-artifact@v6
+        with:
+          name: deb
+          path: dist/*.deb
+
+  install-smoke:
+    name: Installation (${{ matrix.image }})
+    needs: package
+    runs-on: ubuntu-latest
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Debian 12 installiert zusätzlich Autodarts selbst (echter Download).
+          - image: debian:bookworm
+            skip_autodarts: "0"
+          - image: debian:trixie
+            skip_autodarts: "1"
+          - image: ubuntu:24.04
+            skip_autodarts: "1"
+          - image: ubuntu:22.04
+            skip_autodarts: "1"
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: deb
+          path: pkg
+
+      - name: apt install
+        env:
+          AUTODARTS_HEADLESS_SKIP_AUTODARTS: ${{ matrix.skip_autodarts }}
+        run: |
+          apt-get update -qq
+          apt-get install -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold \
+            "$(ls "$PWD"/pkg/*.deb)"
+
+      - name: Installation prüfen
+        run: |
+          set -x
+          id autodarts
+          id -nG autodarts | tr ' ' '\n' | grep -qx video
+          test -f /lib/systemd/system/autodarts-headless-control.service
+          test -f /lib/systemd/system/autodarts-update.timer
+          test -x /opt/autodarts-headless-control/.venv/bin/python
+          test "$(stat -c %U /opt/autodarts-headless-control/app/main.py)" = root
+          test "$(stat -c '%U:%G %a' /etc/autodarts-headless-control.env)" = "root:autodarts 640"
+          test -x /usr/local/sbin/autodarts-firewall-sync
+          grep -q 'autodarts' /etc/polkit-1/rules.d/99-autodarts-network.rules
+
+      - name: Weboberfläche starten und abfragen
+        run: |
+          apt-get install -y -qq curl >/dev/null
+          cd /opt/autodarts-headless-control
+          runuser -u autodarts -- env \
+            HEADLESS_HTTP_PORT=8080 HEADLESS_WS_PORT=8093 \
+            HEADLESS_HOTSPOT_FALLBACK=0 HEADLESS_AUTODARTS_AUTOSTART=0 \
+            .venv/bin/python -m app.main > /tmp/app.log 2>&1 &
+          for i in $(seq 1 30); do curl -fs http://127.0.0.1:8080/health && break; sleep 1; done
+          curl -fs http://127.0.0.1:8080/health >/dev/null || { echo "App startet nicht:"; cat /tmp/app.log; exit 1; }
+          echo
+          curl -fsS http://127.0.0.1:8080/ | grep -q "Autodarts-Steuerung"
+          curl -fsS http://127.0.0.1:8080/admin | grep -q "Experten-Werkzeuge"
+          curl -fsS http://127.0.0.1:8080/api/system
+          echo
+          curl -fsS http://127.0.0.1:8080/api/autodarts
+          echo
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Origin: https://evil.example' http://127.0.0.1:8080/api/system/shutdown)
+          test "$code" = 403
+          cat /tmp/app.log
+
+      - name: Autodarts-CLI prüfen (Befehl "run" für den Hintergrunddienst)
+        if: matrix.skip_autodarts == '0'
+        run: |
+          BIN=/var/lib/autodarts-headless-control/.local/bin/autodarts
+          test -x "$BIN"
+          runuser -u autodarts -- env HOME=/var/lib/autodarts-headless-control "$BIN" --version || true
+          runuser -u autodarts -- env HOME=/var/lib/autodarts-headless-control "$BIN" --help | tee /tmp/help.txt
+          grep -Eqw "run" /tmp/help.txt
+
+      - name: Deinstallieren
+        run: |
+          apt-get purge -y autodarts-headless-control
+          test ! -e /opt/autodarts-headless-control/.venv
+
+  install-generic:
+    name: Installation ohne apt (${{ matrix.image }})
+    needs: [tests, shell]
+    runs-on: ubuntu-latest
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - fedora:latest
+          - almalinux:9
+          - archlinux:latest
+          - opensuse/tumbleweed
+          - opensuse/leap:15.6
+    steps:
+      # Minimale Container-Images enthalten kein systemd (echte Installationen schon).
+      - name: Basiswerkzeuge im Container
+        run: |
+          if command -v dnf >/dev/null; then dnf install -y -q tar gzip systemd; fi
+          if command -v pacman >/dev/null; then pacman -Sy --noconfirm --needed tar gzip; fi
+          if command -v zypper >/dev/null; then zypper --non-interactive install tar gzip systemd; fi
+
+      - uses: actions/checkout@v5
+
+      - name: install.sh (aus dem Projektordner)
+        run: bash installer/install.sh --skip-autodarts
+
+      - name: Installation prüfen
+        run: |
+          set -x
+          id autodarts
+          id -nG autodarts | tr ' ' '\n' | grep -qx video
+          test -f /usr/local/lib/systemd/system/autodarts-headless-control.service
+          test -x /opt/autodarts-headless-control/.venv/bin/python
+          test -f /etc/polkit-1/rules.d/99-autodarts-network.rules
+          test -x /etc/NetworkManager/dispatcher.d/90-autodarts-firewall
+          test -s /var/lib/autodarts-headless-control-install/manifest
+
+      - name: Weboberfläche starten und abfragen
+        run: |
+          cd /opt/autodarts-headless-control
+          runuser -u autodarts -- env \
+            HEADLESS_HTTP_PORT=8080 HEADLESS_WS_PORT=8093 \
+            HEADLESS_HOTSPOT_FALLBACK=0 HEADLESS_AUTODARTS_AUTOSTART=0 \
+            .venv/bin/python -m app.main > /tmp/app.log 2>&1 &
+          for i in $(seq 1 30); do curl -fs http://127.0.0.1:8080/health && break; sleep 1; done
+          curl -fs http://127.0.0.1:8080/health >/dev/null || { echo "App startet nicht:"; cat /tmp/app.log; exit 1; }
+          echo
+          curl -fsS http://127.0.0.1:8080/ | grep -q "Autodarts-Steuerung"
+          curl -fsS http://127.0.0.1:8080/api/autodarts
+          echo
+          cat /tmp/app.log
+
+      - name: Erneut installieren (Update) und deinstallieren
+        run: |
+          echo "HEADLESS_HOTSPOT_GRACE=60" >> /etc/autodarts-headless-control.env
+          bash installer/install.sh --skip-autodarts
+          grep -q "HEADLESS_HOTSPOT_GRACE=60" /etc/autodarts-headless-control.env
+          bash installer/install.sh --uninstall
+          test ! -e /opt/autodarts-headless-control
+          test ! -e /usr/local/lib/systemd/system/autodarts-headless-control.service
+
+  install-systemd:
+    name: Echter Systemstart (Ubuntu-VM mit systemd)
+    needs: [tests, shell]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: install.sh inklusive Autodarts
+        run: sudo bash installer/install.sh
+
+      - name: Weboberfläche läuft als gehärteter systemd-Dienst
+        run: |
+          set -x
+          systemctl is-enabled autodarts-headless-control.service
+          for i in $(seq 1 30); do systemctl is-active --quiet autodarts-headless-control.service && break; sleep 1; done
+          systemctl is-active autodarts-headless-control.service
+          PORT="$(sudo sed -n 's/^HEADLESS_HTTP_PORT=//p' /etc/autodarts-headless-control.env | tail -n1)"
+          echo "PORT=${PORT:-80}" >> "$GITHUB_ENV"
+          for i in $(seq 1 30); do curl -fs "http://127.0.0.1:${PORT:-80}/health" && break; sleep 1; done
+          curl -fsS "http://127.0.0.1:${PORT:-80}/health"
+          systemctl is-enabled autodarts-update.timer autodarts-headless-control-update.timer
+
+      - name: polkit erlaubt dem Dienstbenutzer die WLAN-Verwaltung
+        run: |
+          sudo -u autodarts nmcli general permissions | tee /tmp/perm.txt
+          grep -E "settings\.modify\.system[[:space:]]+yes" /tmp/perm.txt
+          grep -E "network-control[[:space:]]+yes" /tmp/perm.txt
+
+      - name: Autodarts-Autostart wird ohne TUI eingerichtet
+        run: |
+          RUNTIME="XDG_RUNTIME_DIR=/run/user/$(id -u autodarts)"
+          UNIT=/var/lib/autodarts-headless-control/.config/systemd/user/autodarts.service
+          for i in $(seq 1 60); do sudo test -f "$UNIT" && break; sleep 2; done
+          sudo cat "$UNIT"
+          sudo -u autodarts env "$RUNTIME" systemctl --user is-enabled autodarts.service
+          sleep 15
+          sudo -u autodarts env "$RUNTIME" systemctl --user status autodarts.service --no-pager || true
+          curl -s -o /dev/null -w 'Board-Manager (Port 3180): HTTP %{http_code}\n' http://127.0.0.1:3180/ || true
+
+      - name: Autodarts über die Weboberfläche neu starten
+        run: |
+          curl -fsS -X POST "http://127.0.0.1:${PORT:-80}/api/autodarts/restart"
+          echo
+          curl -fsS "http://127.0.0.1:${PORT:-80}/api/autodarts"
+          echo
+
+      - name: Selbst-Update (ohne veröffentlichtes Release nichts zu tun)
+        run: sudo /opt/autodarts-headless-control/installer/self-update.sh --check
+
+      - name: Protokolle bei Fehlern
+        if: failure()
+        run: |
+          sudo journalctl -u autodarts-headless-control --no-pager | tail -n 80
+          sudo journalctl _UID="$(id -u autodarts)" --no-pager | tail -n 80

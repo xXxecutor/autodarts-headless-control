@@ -1,0 +1,1879 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Autodarts-Steuerung</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    color: #f8fafc;
+
+    background:
+        radial-gradient(circle at top left, #1e3a8a 0, transparent 35%),
+        radial-gradient(circle at bottom right, #312e81 0, transparent 35%),
+        linear-gradient(135deg, #020617, #0f172a);
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 30px 20px 40px;
+}
+
+.container {
+    width: 100%;
+    max-width: 980px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.settings-card {
+    padding: 28px 26px;
+    border-radius: 24px;
+    background: rgba(15, 23, 42, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+        0 20px 50px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(18px);
+}
+
+.settings-card.flex-col {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    min-height: 485px;
+    box-sizing: border-box;
+}
+
+.main-grid-2col {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+}
+
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 4px 6px;
+    flex-wrap: wrap;
+}
+
+.header-brand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.logo {
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    border-radius: 18px;
+    box-shadow: 0 10px 25px rgba(37, 99, 235, 0.35);
+    flex-shrink: 0;
+}
+
+.logo svg {
+    width: 34px;
+    height: 34px;
+}
+
+.page-title {
+    margin: 0;
+    font-size: 26px;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: normal;
+    color: #f8fafc;
+    text-rendering: optimizeLegibility;
+}
+
+.page-subtitle {
+    margin: 4px 0 0;
+    color: #94a3b8;
+    font-size: 14px;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.btn-admin-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border-radius: 12px;
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    color: #cbd5e1;
+    font-size: 13.5px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.btn-admin-link:hover {
+    background: rgba(37, 99, 235, 0.2);
+    border-color: rgba(96, 165, 250, 0.4);
+    color: #ffffff;
+}
+
+.status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    background: rgba(34, 197, 94, 0.16);
+    border: 1px solid rgba(74, 222, 128, 0.42);
+    color: #4ade80;
+    font-size: 13.5px;
+    font-weight: 650;
+    box-shadow: 0 0 16px rgba(34, 197, 94, 0.14);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 6px #4ade80, 0 0 12px #4ade80;
+}
+
+.hotspot-banner {
+    padding: 14px 18px;
+    border-radius: 16px;
+    background: rgba(251, 191, 36, 0.15);
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    color: #fcd34d;
+    font-size: 13.5px;
+    line-height: 1.5;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.hotspot-banner:hover {
+    background: rgba(251, 191, 36, 0.22);
+    border-color: rgba(251, 191, 36, 0.5);
+}
+
+.section-title {
+    margin: 0 0 8px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #f1f5f9;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.section-desc {
+    margin: 0 0 20px;
+    color: #94a3b8;
+    font-size: 13.5px;
+    line-height: 1.55;
+}
+
+.card-header-block {
+    min-height: 88px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.card-header-block .section-desc {
+    margin: 0;
+}
+
+.buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+button {
+    width: 100%;
+    min-height: 54px;
+    border: 0;
+    border-radius: 14px;
+    color: white;
+    font-family: inherit;
+    font-size: 15.5px;
+    font-weight: 650;
+    text-decoration: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: transform 0.12s ease, box-shadow 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+}
+
+button:hover {
+    opacity: 0.96;
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+button svg {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+}
+
+.primary {
+    color: #dbeafe;
+    background: rgba(30, 64, 175, 0.25);
+    border: 1px solid rgba(96, 165, 250, 0.20);
+    box-shadow: 0 4px 14px rgba(30, 64, 175, 0.15);
+}
+
+.primary:hover {
+    background: rgba(30, 64, 175, 0.38);
+    border-color: rgba(96, 165, 250, 0.45);
+    color: #ffffff;
+    box-shadow: 0 6px 18px rgba(30, 64, 175, 0.28);
+}
+
+.secondary {
+    color: #e2e8f0;
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+.secondary:hover {
+    background: rgba(37, 99, 235, 0.18);
+    border-color: rgba(96, 165, 250, 0.45);
+    color: #ffffff;
+}
+
+/* Farbliche Abhebung der Neustart-Funktionen (Bernstein/Orange) */
+.warning {
+    color: #fde68a;
+    background: rgba(245, 158, 11, 0.16);
+    border: 1px solid rgba(251, 191, 36, 0.4);
+    box-shadow: 0 4px 14px rgba(245, 158, 11, 0.12);
+}
+
+.warning:hover {
+    background: rgba(245, 158, 11, 0.28);
+    border-color: rgba(251, 191, 36, 0.7);
+    color: #ffffff;
+    box-shadow: 0 6px 18px rgba(245, 158, 11, 0.25);
+}
+
+/* Farbliche Abhebung des Herunterfahrens (Signalrot) */
+.danger {
+    color: #fecaca;
+    background: rgba(239, 68, 68, 0.18);
+    border: 1px solid rgba(248, 113, 113, 0.45);
+    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.15);
+}
+
+.danger:hover {
+    background: rgba(239, 68, 68, 0.32);
+    border-color: rgba(248, 113, 113, 0.8);
+    color: #ffffff;
+    box-shadow: 0 6px 22px rgba(239, 68, 68, 0.3);
+}
+
+/* Deutlich hervorgehobene Hinweiskarte zur Konfiguration */
+.config-note {
+    margin-top: auto;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: rgba(37, 99, 235, 0.12);
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    border-left: 4px solid #3b82f6;
+    color: #cbd5e1;
+    font-size: 13px;
+    line-height: 1.55;
+    box-sizing: border-box;
+}
+
+.config-note strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #60a5fa;
+    font-size: 13.5px;
+}
+
+/* Board-Status und Fallback-Hinweise */
+.board-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    padding: 9px 12px;
+    border-radius: 12px;
+    background: rgba(30, 41, 59, 0.55);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    color: #cbd5e1;
+    font-size: 13px;
+}
+
+.board-dot {
+    flex: 0 0 auto;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #64748b;
+}
+
+.board-status.ok .board-dot { background: #22c55e; box-shadow: 0 0 8px rgba(34, 197, 94, 0.6); }
+.board-status.wait .board-dot { background: #f59e0b; }
+.board-status.error .board-dot { background: #ef4444; }
+
+.board-fallback {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0 0 16px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgba(217, 119, 6, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #e2e8f0;
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+
+.board-fallback strong {
+    color: #fbbf24;
+    font-size: 13px;
+}
+
+.board-fallback button {
+    margin-top: 2px;
+}
+
+/* Deutlich hervorgehobene Warnbox */
+.power-note {
+    margin-top: auto;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: rgba(217, 119, 6, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    border-left: 4px solid #f59e0b;
+    color: #fde68a;
+    font-size: 13px;
+    line-height: 1.55;
+    box-sizing: border-box;
+}
+
+.power-note strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #fbbf24;
+    font-size: 13.5px;
+}
+
+.footer {
+    text-align: center;
+    color: #64748b;
+    font-size: 13px;
+    padding: 8px 0;
+}
+
+.footer a {
+    color: #94a3b8;
+    text-decoration: underline;
+    transition: color 0.15s;
+}
+
+.footer a:hover {
+    color: #38bdf8;
+}
+
+
+/* Dialog */
+
+.overlay {
+    position: fixed;
+    inset: 0;
+
+    background: rgba(2, 6, 23, 0.78);
+    backdrop-filter: blur(8px);
+
+    display: none;
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+    z-index: 100;
+}
+
+.dialog {
+    width: 100%;
+    max-width: 390px;
+
+    padding: 26px;
+
+    border-radius: 24px;
+
+    background: #0f172a;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+
+    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.55);
+}
+
+.dialog h2 {
+    margin: 0 0 10px;
+    font-size: 22px;
+}
+
+.dialog p {
+    margin: 0 0 22px;
+    color: #94a3b8;
+    line-height: 1.55;
+    font-size: 14px;
+}
+
+.dialog-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.dialog-buttons button {
+    min-height: 50px;
+}
+
+.cancel {
+    background: rgba(148, 163, 184, 0.12);
+}
+
+
+/* Fullscreen state */
+
+.fullscreen {
+    position: fixed;
+    inset: 0;
+
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    text-align: center;
+    padding: 30px;
+
+    background:
+        radial-gradient(circle at center, rgba(37, 99, 235, 0.22), transparent 38%),
+        linear-gradient(135deg, #020617, #0f172a);
+
+    z-index: 200;
+}
+
+.fullscreen-icon {
+    width: 92px;
+    height: 92px;
+
+    margin-bottom: 25px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 28px;
+
+    background: rgba(37, 99, 235, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.28);
+
+    color: #60a5fa;
+}
+
+.fullscreen-icon svg {
+    width: 58px;
+    height: 58px;
+}
+
+.fullscreen h2 {
+    margin: 0 0 10px;
+    font-size: 28px;
+}
+
+.fullscreen p {
+    margin: 0;
+    max-width: 380px;
+    color: #94a3b8;
+    line-height: 1.55;
+}
+
+.spinner {
+    width: 34px;
+    height: 34px;
+
+    margin-top: 28px;
+
+    border: 3px solid rgba(148, 163, 184, 0.20);
+    border-top-color: #60a5fa;
+
+    border-radius: 50%;
+
+    animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+
+/* Shutdown finished */
+
+.off-screen {
+    background:
+        radial-gradient(circle at center, rgba(34, 197, 94, 0.12), transparent 38%),
+        linear-gradient(135deg, #020617, #0f172a);
+}
+
+.off-icon {
+    color: #4ade80;
+    background: rgba(34, 197, 94, 0.10);
+    border-color: rgba(34, 197, 94, 0.20);
+}
+
+@media (max-width: 767px) {
+    body {
+        padding: 20px 14px 36px;
+        align-items: flex-start;
+    }
+    .page-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 14px;
+    }
+    .header-brand {
+        flex-direction: column;
+        gap: 12px;
+    }
+    .header-actions {
+        width: 100%;
+        justify-content: center;
+    }
+    .main-grid-2col {
+        grid-template-columns: 1fr;
+    }
+    .settings-card {
+        padding: 22px 20px;
+    }
+    .card-header-block {
+        min-height: auto;
+        margin-bottom: 16px;
+    }
+    .settings-card.flex-col {
+        min-height: auto;
+    }
+    .buttons {
+        margin-bottom: 0;
+    }
+    .config-note, .power-note {
+        min-height: auto;
+        margin-top: 24px;
+    }
+}
+
+@media (max-width: 480px) {
+    .page-title {
+        font-size: 22px;
+    }
+    button {
+        min-height: 50px;
+        font-size: 15px;
+    }
+}
+
+.autodarts-terminal-dialog {
+    width: 94vw !important;
+    max-width: 1400px !important;
+
+    height: 88vh;
+    height: 88dvh;
+    max-height: calc(100dvh - 16px);
+
+    padding: 12px;
+    box-sizing: border-box;
+
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.autodarts-terminal-dialog h2 {
+    flex: 0 0 auto;
+}
+
+#autodartsTerminalContainer {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+}
+
+.autodarts-terminal-frame {
+    display: block;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    width: 100%;
+    height: 100%;
+
+    border: 0;
+    border-radius: 12px;
+    background: #111;
+}
+
+/* WLAN-Setup Overlay Styles */
+.form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+    text-align: left;
+}
+
+.form-label {
+    font-size: 13px;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.form-input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    background: rgba(15, 23, 42, 0.85);
+    color: #f1f5f9;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color .15s;
+}
+
+.form-input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.network-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 180px;
+    overflow-y: auto;
+    padding-right: 4px;
+    margin-bottom: 12px;
+}
+
+.network-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    text-align: left;
+}
+
+.network-item:hover {
+    border-color: rgba(96, 165, 250, 0.4);
+    background: rgba(37, 99, 235, 0.12);
+}
+
+.signal-bar {
+    display: inline-block;
+    width: 3px;
+    background: #475569;
+    margin-right: 1px;
+    border-radius: 1px;
+}
+
+.signal-bar.active {
+    background: #38bdf8;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- Kopfzeile -->
+    <header class="page-header">
+        <div class="header-brand">
+            <div class="logo">
+                <svg viewBox="0 0 64 64" fill="none"
+                     xmlns="http://www.w3.org/2000/svg"
+                     aria-hidden="true">
+                    <circle cx="32" cy="32" r="28" stroke="white" stroke-width="3"/>
+                    <circle cx="32" cy="32" r="23" stroke="white" stroke-width="2"/>
+                    <circle cx="32" cy="32" r="14" stroke="white" stroke-width="2"/>
+                    <circle cx="32" cy="32" r="6" stroke="white" stroke-width="2"/>
+                    <circle cx="32" cy="32" r="2.5" fill="white"/>
+                    <path d="M32 4V60" stroke="white" stroke-width="1.5" opacity="0.8"/>
+                    <path d="M4 32H60" stroke="white" stroke-width="1.5" opacity="0.8"/>
+                    <path d="M12.2 12.2L51.8 51.8" stroke="white" stroke-width="1.5" opacity="0.8"/>
+                    <path d="M51.8 12.2L12.2 51.8" stroke="white" stroke-width="1.5" opacity="0.8"/>
+                </svg>
+            </div>
+            <div>
+                <h1 class="page-title">Autodarts-Steuerung</h1>
+                <p class="page-subtitle">Headless Dartboard-Bedienung</p>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <div class="status" id="systemStatus">
+                <span class="status-dot"></span> System ist aktiv
+            </div>
+            <a href="/admin" class="btn-admin-link" title="Admin / Netzwerkverwaltung">⚙️ Admin / Netzwerk</a>
+        </div>
+    </header>
+
+    <!-- Hotspot-Banner (falls aktiv) -->
+    <div id="hotspotBanner" class="hotspot-banner" style="display:none;" onclick="showDialog('hotspotWifiOverlay')">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+            <span>📡 <strong>Einrichtungs-Hotspot aktiv</strong></span>
+            <span style="text-decoration:underline;font-size:12px;font-weight:600;">WLAN einrichten ➔</span>
+        </div>
+    </div>
+
+    <!-- Hauptbereich: 2 Spalten auf Desktop / PC -->
+    <div class="main-grid-2col">
+
+        <!-- Karte 1: Dartboard & Konfiguration -->
+        <section class="settings-card flex-col">
+            <div class="card-header-block">
+                <h2 class="section-title">🎯 Autodarts-Bedienung</h2>
+                <p class="section-desc">
+                    Board im offiziellen Autodarts Board-Manager einrichten und direkt im Spielportal loslegen.
+                </p>
+            </div>
+
+            <!-- Board-Status (wird per /api/autodarts befüllt) -->
+            <div class="board-status" id="boardStatus">
+                <span class="board-dot"></span>
+                <span id="boardStatusText">Autodarts-Status wird geladen…</span>
+            </div>
+
+            <div class="buttons" style="margin-top: 14px;">
+                <!-- play.autodarts.com öffnen -->
+                <button class="primary"
+                        onclick="window.open('https://play.autodarts.com', '_blank')">
+                    🎯 play.autodarts.com öffnen
+                </button>
+
+                <!-- Board-Manager (Hauptweg zur Einrichtung) -->
+                <button class="secondary" id="boardManagerBtn"
+                        onclick="openBoardManager()">
+                    🛠️ Board einrichten (Board-Manager)
+                </button>
+            </div>
+
+            <!-- Autostart reparieren (nur sichtbar, wenn Autodarts nicht als Dienst läuft) -->
+            <div class="board-fallback" id="autostartFix" style="display:none;">
+                <strong>⚠️ Autodarts startet nicht automatisch</strong>
+                <span>Damit das Board nach jedem Einschalten bereit ist, muss Autodarts als Hintergrunddienst laufen.</span>
+                <button class="secondary" id="autostartBtn" onclick="setupAutostart()">
+                    🔁 Autostart einrichten
+                </button>
+            </div>
+
+            <!-- Fallback: Terminal-Einrichtung (nur sichtbar, wenn der Board-Manager nicht erreichbar ist) -->
+            <div class="board-fallback" id="tuiFallback" style="display:none;">
+                <strong>Board-Manager nicht erreichbar</strong>
+                <span>Der Board-Manager benötigt Autodarts 2.1 oder neuer. Alternativ kannst du das Board über die Terminal-Einrichtung konfigurieren.</span>
+                <button class="secondary" onclick="showDialog('configOverlay')">
+                    ⌨️ Terminal-Einrichtung öffnen (Fallback)
+                </button>
+            </div>
+
+            <div class="config-note">
+                <strong>💡 So richtest du dein Board ein:</strong>
+                Der Board-Manager öffnet sich in einem neuen Tab. Dort meldest du das Board an deinem Autodarts-Konto an, ordnest die Kameras zu, passt Auflösung und Bildeinstellungen an und kalibrierst das Board. Danach einfach auf play.autodarts.com spielen.
+            </div>
+        </section>
+
+        <!-- Karte 2: Neustart & Herunterfahren -->
+        <section class="settings-card flex-col">
+            <div class="card-header-block">
+                <h2 class="section-title">⚡ Neustart &amp; Herunterfahren</h2>
+                <p class="section-desc">
+                    Dienst- und Systemneustart sowie das sichere Herunterfahren des Endgeräts.
+                </p>
+            </div>
+
+            <div class="buttons" style="margin-top: 20px;">
+                <!-- Autodarts neu starten -->
+                <button class="warning"
+                        onclick="showDialog('autodartsRestartOverlay')">
+                    🔄 Autodarts neu starten
+                </button>
+
+                <!-- Neustart -->
+                <button class="warning"
+                        onclick="showDialog('restartOverlay')">
+                    🔄 System neu starten
+                </button>
+
+                <!-- Herunterfahren -->
+                <button class="danger"
+                        onclick="showDialog('shutdownOverlay')">
+                    ❌ System herunterfahren
+                </button>
+            </div>
+
+            <!-- Deutlich hervorgehobene Warnung vor Stromtrennung -->
+            <div class="power-note">
+                <strong>⚠️ Wichtig: Stromversorgung nicht vorher trennen!</strong>
+                Endgerät immer zuerst über „Herunterfahren“ ausschalten. Warte auf die Meldung „System ist aus“.
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Admin-Overlay (Bestandskomponente) -->
+    <div class="overlay" id="adminOverlay">
+        <div class="dialog autodarts-terminal-dialog">
+            <h2>Admin / Netzwerkverwaltung</h2>
+            <p>Hier kannst du Netzwerk-Einstellungen ändern, WLAN scannen, verbinden und den Hotspot starten.</p>
+            <div class="dialog-buttons">
+                <button class="secondary" onclick="wifiScan()">WLAN scannen</button>
+                <button class="secondary" onclick="showConnectDialog()">Netzwerk verbinden</button>
+                <button class="warning" onclick="startHotspotManual()">Hotspot starten</button>
+                <button class="danger" onclick="prepareHandover()">Handover / Reset</button>
+                <button class="secondary" onclick="window.open('/admin', '_blank')">Admin-Oberfläche öffnen</button>
+                <button class="cancel" onclick="hideDialog('adminOverlay')">Schließen</button>
+            </div>
+            <p><strong>⚠ Wichtig:</strong> Beim Starten des Hotspots wird das LAN-Netzwerk <strong>vorübergehend unterbrochen</strong>. Das Endgerät wechselt dann auf das Hotspot-Subnetz <code>192.168.4.1/24</code>.</p>
+        </div>
+    </div>
+
+    <!-- Fußbereich -->
+    <footer class="footer">
+        Autodarts-Systemsteuerung
+    </footer>
+
+</div>
+
+<!-- Hotspot WLAN Setup Overlay -->
+<div class="overlay" id="hotspotWifiOverlay">
+    <div class="dialog" style="max-width: 440px; padding: 26px 22px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <h2 style="margin: 0; font-size: 20px; display: flex; align-items: center; gap: 8px;">
+                <span>📡</span> WLAN-Einrichtung
+            </h2>
+            <button type="button" onclick="hideDialog('hotspotWifiOverlay')" style="background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer;padding:0;min-height:auto;width:auto;line-height:1;" title="Schließen">✕</button>
+        </div>
+
+        <div id="hotspotSetupContent">
+            <p style="margin: 0 0 16px; color: #cbd5e1; font-size: 13.5px; line-height: 1.5;">
+                Die Autodarts-Box läuft im <strong>Einrichtungs-Modus</strong>. Verbinde sie mit deinem Heim-WLAN, um die Box ins lokale Netzwerk einzubinden und Internetzugriff zu erhalten.
+            </p>
+
+            <!-- Ergebnis des letzten Verbindungsversuchs (z. B. falsches Passwort) -->
+            <div id="lastConnectError" style="display:none; margin: 0 0 14px; padding: 10px 12px; border-radius: 12px; background: rgba(239,68,68,0.12); border: 1px solid rgba(248,113,113,0.35); color: #fca5a5; font-size: 12.5px; line-height: 1.45;"></div>
+
+            <!-- WLAN Scannen & Liste -->
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                <span style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: #94a3b8;">Verfügbare Netzwerke</span>
+                <button type="button" id="startScanBtn" onclick="scanWifiStartpage()" style="background: rgba(37,99,235,0.2); border: 1px solid rgba(96,165,250,0.3); color: #60a5fa; font-size: 12px; font-weight: 600; padding: 4px 10px; min-height: 28px; width: auto; border-radius: 8px;">
+                    <span id="startScanSpinner" class="spinner" style="display:none; width:12px; height:12px; border-width:2px; margin:0 4px 0 0;"></span>
+                    <span id="startScanLabel">🔍 Scannen</span>
+                </button>
+            </div>
+
+            <div class="network-list" id="startpageNetworkList">
+                <div style="text-align: center; padding: 16px; color: #64748b; font-size: 12px;">
+                    Lade Netzwerke…
+                </div>
+            </div>
+
+            <!-- Manuelle Eingabe -->
+            <form id="startpageWifiForm" onsubmit="connectWifiStartpage(event)" style="margin-top: 14px;">
+                <div class="form-row">
+                    <label class="form-label" for="startSsid">SSID (Netzwerkname)</label>
+                    <input type="text" class="form-input" id="startSsid" placeholder="z. B. MeinHeimWLAN" required autocomplete="off">
+                </div>
+
+                <div class="form-row">
+                    <label class="form-label" for="startPass">WLAN-Passwort</label>
+                    <input type="password" class="form-input" id="startPass" placeholder="WLAN-Passwort (leer = offen)" autocomplete="off">
+                </div>
+
+                <button type="submit" class="primary" id="startConnectBtn" style="min-height: 48px; margin-top: 14px;">
+                    <span id="startConnectSpinner" class="spinner" style="display:none; width:18px; height:18px; border-width:2px; margin:0 6px 0 0;"></span>
+                    <span id="startConnectLabel">📶 Mit diesem WLAN verbinden</span>
+                </button>
+            </form>
+
+            <div style="margin-top: 16px; padding: 10px 12px; border-radius: 12px; background: rgba(30,41,59,0.5); border: 1px solid rgba(148,163,184,0.12); font-size: 12px; color: #94a3b8; line-height: 1.45;">
+                ℹ️ <strong>Hinweis:</strong> Nach dem Klick wird dieser Hotspot beendet. Verbinde dein Endgerät anschließend wieder mit deinem Heim-WLAN und öffne <a href="http://autodarts.local" style="color: #38bdf8; text-decoration: underline;">http://autodarts.local</a>.
+            </div>
+
+            <div style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center;">
+                <a href="/admin" style="color: #64748b; font-size: 12px; text-decoration: underline;">⚙️ Zur Admin-Seite</a>
+                <button type="button" onclick="hideDialog('hotspotWifiOverlay')" style="background: none; border: none; color: #64748b; font-size: 12px; cursor: pointer; padding: 0; min-height: auto; width: auto; text-decoration: underline;">Später einrichten</button>
+            </div>
+        </div>
+
+        <!-- Umschalt- / Verbindungsstatus -->
+        <div id="hotspotConnectingContent" style="display: none; text-align: center; padding: 10px 0;">
+            <div style="font-size: 42px; margin-bottom: 12px;">📶</div>
+            <h3 id="connectingTitle" style="margin: 0 0 10px; font-size: 18px; color: #f1f5f9;">WLAN wird eingerichtet…</h3>
+            <p id="connectingText" style="color: #cbd5e1; font-size: 13.5px; line-height: 1.6; margin: 0 0 20px;"></p>
+            <div id="connectingSpinner" style="text-align: center; margin: 20px 0;">
+                <span class="spinner" style="display: inline-block; width: 34px; height: 34px; border-width: 3px; border-top-color: #38bdf8;"></span>
+            </div>
+            <div id="connectingActions" style="display: none; margin-top: 20px;">
+                <a href="http://autodarts.local" class="primary" style="display: inline-block; padding: 12px 20px; border-radius: 14px; text-decoration: none; color: white; font-weight: 600; width: 100%;">http://autodarts.local aufrufen</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Autodarts Konfiguration -->
+<div class="overlay" id="configOverlay">
+
+    <div class="dialog autodarts-terminal-dialog">
+
+        <h2>Terminal-Einrichtung (Fallback)</h2>
+
+    <div id="autodartsTerminalContainer">
+    </div>
+
+        <div class="dialog-buttons">
+
+            <button class="cancel"
+                    onclick="hideDialog('configOverlay')">
+                Schließen
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- Autodarts Neustart Dialog -->
+<div class="overlay" id="autodartsRestartOverlay">
+
+    <div class="dialog">
+
+        <h2>Autodarts neu starten?</h2>
+
+        <p>
+            Autodarts wird neu gestartet.
+            Das System selbst wird nicht neu gestartet.
+        </p>
+
+        <div class="dialog-buttons">
+
+            <button class="cancel"
+                    onclick="hideDialog('autodartsRestartOverlay')">
+                Abbrechen
+            </button>
+
+            <button class="warning"
+                    onclick="restartAutodarts()">
+                Neustart
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- Neustart Dialog -->
+<div class="overlay" id="restartOverlay">
+
+    <div class="dialog">
+
+        <h2>🔄 System neu starten?</h2>
+
+        <p>
+            Das System wird neu gestartet.
+            Autodarts startet danach automatisch wieder.
+        </p>
+
+        <div class="dialog-buttons">
+
+            <button class="cancel"
+                    onclick="hideDialog('restartOverlay')">
+                Abbrechen
+            </button>
+
+            <button class="warning"
+                    onclick="restartSystem()">
+                Neustart
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- Herunterfahren Dialog -->
+<div class="overlay" id="shutdownOverlay">
+
+    <div class="dialog">
+
+        <h2>❌ System herunterfahren?</h2>
+
+        <p>
+            Das System wird sicher heruntergefahren.
+            Danach kann die Stromversorgung ausgeschaltet werden.
+        </p>
+
+        <div class="dialog-buttons">
+
+            <button class="cancel"
+                    onclick="hideDialog('shutdownOverlay')">
+                Abbrechen
+            </button>
+
+            <button class="danger"
+                    onclick="shutdownSystem()">
+                Herunterfahren
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- Neustart Status -->
+<div class="fullscreen" id="restartScreen">
+
+    <div class="fullscreen-icon">
+
+        <svg viewBox="0 0 48 48"
+             fill="none"
+             xmlns="http://www.w3.org/2000/svg">
+
+            <path d="M40 22A16 16 0 0 0 12.6 10.6L8 15"
+                  stroke="currentColor"
+                  stroke-width="3"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"/>
+
+            <path d="M8 7V15H16"
+                  stroke="currentColor"
+                  stroke-width="3"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"/>
+
+            <path d="M8 26A16 16 0 0 0 35.4 37.4L40 33"
+                  stroke="currentColor"
+                  stroke-width="3"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"/>
+
+            <path d="M40 41V33H32"
+                  stroke="currentColor"
+                  stroke-width="3"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"/>
+
+        </svg>
+
+    </div>
+
+    <h2>System wird neu gestartet …</h2>
+
+    <p>
+        Bitte warten. Das System startet jetzt neu.
+    </p>
+
+    <div class="spinner"></div>
+
+</div>
+
+
+<!-- Herunterfahren Status -->
+<div class="fullscreen" id="shutdownScreen">
+
+    <div class="fullscreen-icon">
+
+        <svg viewBox="0 0 48 48"
+             fill="none"
+             xmlns="http://www.w3.org/2000/svg">
+
+            <path d="M24 7V24"
+                  stroke="currentColor"
+                  stroke-width="4"
+                  stroke-linecap="round"/>
+
+            <path d="M14.2 11.7A18 18 0 1 0 33.8 11.7"
+                  stroke="currentColor"
+                  stroke-width="4"
+                  stroke-linecap="round"/>
+
+        </svg>
+
+    </div>
+
+    <h2>System wird heruntergefahren …</h2>
+
+    <p>
+        Bitte warten. Das System wird jetzt sicher ausgeschaltet.
+    </p>
+
+    <div class="spinner"></div>
+
+</div>
+
+
+<!-- Ausgeschaltet -->
+<div class="fullscreen off-screen" id="offScreen">
+
+    <div class="fullscreen-icon off-icon">
+
+        <svg viewBox="0 0 48 48"
+             fill="none"
+             xmlns="http://www.w3.org/2000/svg">
+
+            <path d="M10 25L20 35L38 14"
+                  stroke="currentColor"
+                  stroke-width="4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"/>
+
+        </svg>
+
+    </div>
+
+    <h2>System ist aus</h2>
+
+    <p>
+        Das System wurde sicher heruntergefahren.
+        <br><br>
+        Die Stromversorgung kann jetzt ausgeschaltet werden.
+    </p>
+
+</div>
+
+
+<script>
+
+function createAutodartsTerminal() {
+    const container = document.getElementById(
+        "autodartsTerminalContainer"
+    );
+
+    container.innerHTML = "";
+
+    const iframe = document.createElement("iframe");
+
+    iframe.src = "/terminal";
+    iframe.className = "autodarts-terminal-frame";
+    iframe.title = "Autodarts Konfiguration";
+
+    container.appendChild(iframe);
+}
+
+function showDialog(id) {
+    if (id === "configOverlay") {
+        createAutodartsTerminal();
+    }
+
+    document.getElementById(id).style.display = "flex";
+}
+
+function hideDialog(id) {
+    if (id === "configOverlay") {
+        const container = document.getElementById(
+            "autodartsTerminalContainer"
+        );
+
+        container.innerHTML = "";
+    }
+
+    document.getElementById(id).style.display = "none";
+}
+
+async function restartAutodarts() {
+    hideDialog('autodartsRestartOverlay');
+
+    try {
+        const response = await fetch('/api/autodarts/restart', {
+            method: 'POST'
+        });
+
+        if (!response.ok) {
+            throw new Error('Autodarts-Neustart fehlgeschlagen');
+        }
+    } catch (error) {
+        alert('Autodarts konnte nicht neu gestartet werden.');
+    }
+}
+
+async function restartSystem() {
+
+    hideDialog("restartOverlay");
+
+    document.getElementById("restartScreen").style.display = "flex";
+
+    try {
+        await fetch("/api/system/reboot", {
+            method: "POST"
+        });
+    } catch (e) {
+        // Das System kann unmittelbar nach dem Neustart
+        // die Verbindung verlieren. Das ist hier normal.
+    }
+
+    await waitForRestartOffline();
+    await waitForRestartOnline();
+
+    window.location.replace("/");
+}
+
+
+async function waitForRestartOffline() {
+
+    while (true) {
+
+        try {
+
+            const controller = new AbortController();
+
+            const timeout = setTimeout(
+                () => controller.abort(),
+                1500
+            );
+
+            const response = await fetch(
+                "/health?t=" + Date.now(),
+                {
+                    cache: "no-store",
+                    signal: controller.signal
+                }
+            );
+
+            clearTimeout(timeout);
+
+            if (!response.ok) {
+                return;
+            }
+
+        } catch (e) {
+            return;
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+}
+
+
+async function waitForRestartOnline() {
+
+    while (true) {
+
+        try {
+
+            const controller = new AbortController();
+
+            const timeout = setTimeout(
+                () => controller.abort(),
+                1500
+            );
+
+            const response = await fetch(
+                "/health?t=" + Date.now(),
+                {
+                    cache: "no-store",
+                    signal: controller.signal
+                }
+            );
+
+            clearTimeout(timeout);
+
+            if (response.ok) {
+                return;
+            }
+
+        } catch (e) {
+            // Noch nicht erreichbar.
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+}
+
+
+async function shutdownSystem() {
+
+    hideDialog("shutdownOverlay");
+
+    document.getElementById("shutdownScreen").style.display = "flex";
+
+    try {
+        await fetch("/api/system/shutdown", {
+            method: "POST"
+        });
+    } catch (e) {
+        // Verbindung kann beim Herunterfahren abbrechen.
+    }
+
+    // Dem System kurz Zeit geben,
+    // den Shutdown einzuleiten.
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
+    while (true) {
+
+        try {
+
+            const controller = new AbortController();
+
+            const timeout = setTimeout(
+                () => controller.abort(),
+                1500
+            );
+
+            const response = await fetch(
+                "/health?t=" + Date.now(),
+                {
+                    cache: "no-store",
+                    signal: controller.signal
+                }
+            );
+
+            clearTimeout(timeout);
+
+            if (!response.ok) {
+                break;
+            }
+
+        } catch (e) {
+            break;
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    document.getElementById("shutdownScreen").style.display = "none";
+    document.getElementById("offScreen").style.display = "flex";
+}
+
+// Admin / Netzwerk Buttons
+async function wifiScan() {
+    try {
+        const response = await fetch('/api/wifi/scan', { method: 'POST' });
+        const data = await response.json();
+        const networks = data.networks || [];
+        if (networks.length === 0) {
+            alert('Keine WLAN-Netzwerke gefunden.');
+            return;
+        }
+        const list = networks.map(n =>
+            `${n.ssid} (${n.signal}%, ${n.security})`
+        ).join('\n');
+        alert('Gefundene WLAN-Netzwerke:\n\n' + list);
+    } catch (e) {
+        alert('Scan fehlgeschlagen.');
+    }
+}
+
+function showConnectDialog() {
+    const ssid = prompt('SSID des Netzwerks:');
+    if (!ssid) return;
+    const password = prompt('Passwort für "' + ssid + '":', '');
+    if (password === null) return;
+    connectWifi(ssid, password);
+}
+
+async function connectWifi(ssid, password) {
+    try {
+        const response = await fetch('/api/wifi/connect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ssid, password })
+        });
+        const data = await response.json();
+        if (data.success) {
+            alert('Verbindung hergestellt: ' + ssid);
+        } else {
+            alert('Verbinden fehlgeschlagen: ' + (data.error || data.message || 'Unbekannter Fehler'));
+        }
+    } catch (e) {
+        alert('Verbinden fehlgeschlagen.');
+    }
+}
+
+async function startHotspotManual() {
+    if (!confirm('Hotspot starten? Das Endgerät wechselt auf das Hotspot-Subnetz 192.168.4.1/24. Deine LAN-Verbindung wird vorübergehend unterbrochen.')) {
+        return;
+    }
+    try {
+        const response = await fetch('/api/wifi/hotspot/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ssid: 'Autodarts-Setup', password: 'autodarts123' })
+        });
+        const data = await response.json().catch(() => ({}));
+        alert('Hotspot gestartet! Bitte verbinde dich mit dem WLAN "Autodarts-Setup" (Passwort: autodarts123) und öffne http://autodarts.local.');
+    } catch (e) {
+        alert('Hotspot wird aktiviert! Bitte verbinde dich mit dem WLAN "Autodarts-Setup" (Passwort: autodarts123) und öffne http://autodarts.local.');
+    }
+}
+
+async function prepareHandover() {
+    if (!confirm('Handover durchführen? Alle autodarts-WLAN-Profile werden gelöscht. Ethernet und Autodarts-Daten bleiben erhalten.')) {
+        return;
+    }
+    try {
+        const response = await fetch('/api/wifi/handover', { method: 'POST' });
+        const data = await response.json();
+        if (data.success) {
+            alert('Handover abgeschlossen: ' + (data.message || 'WLAN-Profile gelöscht.'));
+        } else {
+            alert('Handover fehlgeschlagen: ' + (data.error || data.message));
+        }
+    } catch (e) {
+        alert('Handover fehlgeschlagen.');
+    }
+}
+
+// --- WLAN-Einrichtung / Hotspot-Erkennung auf der Startseite ---
+let startpageNetworks = [];
+
+function escapeHtml(value) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    };
+    return String(value ?? '').replace(/[&<>"']/g, char => map[char]);
+}
+
+function signalToBars(signal) {
+    const value = Number(signal);
+    let percent = 0;
+    if (Number.isFinite(value)) {
+        if (value < 0) {
+            percent = Math.max(0, Math.min(100, ((value + 100) / 70) * 100));
+        } else {
+            percent = Math.max(0, Math.min(100, value));
+        }
+    }
+    const activeBars = Math.round(percent / 20);
+    let html = '';
+    for (let i = 1; i <= 5; i++) {
+        html += `<span class="signal-bar ${i <= activeBars ? 'active' : ''}" style="height:${i * 2.5}px"></span>`;
+    }
+    return html;
+}
+
+function renderStartpageNetworks(networks) {
+    const list = document.getElementById('startpageNetworkList');
+    if (!list) return;
+
+    const safeNetworks = Array.isArray(networks) ? [...networks] : [];
+    safeNetworks.sort((a, b) => Number(b.in_use === true) - Number(a.in_use === true));
+    startpageNetworks = safeNetworks;
+
+    if (safeNetworks.length === 0) {
+        list.innerHTML =
+            '<div style="text-align:center;padding:16px;color:#64748b;font-size:12px;">' +
+            'Keine Netzwerke gefunden. Klicke auf „Scannen“.' +
+            '</div>';
+        return;
+    }
+
+    list.innerHTML = safeNetworks.map((net, index) => {
+        const ssid = String(net.ssid ?? '(Unbekannt)');
+        const security = String(net.security ?? '');
+        const isOpen = !security || security.toLowerCase() === 'open';
+        const signalBars = signalToBars(net.signal);
+        const connected = net.in_use === true;
+
+        return `
+            <div class="network-item" onclick="selectStartpageNetwork(${index})" style="cursor:pointer;">
+                <div style="min-width:0;flex:1;">
+                    <div style="font-weight:600;font-size:13px;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                        ${escapeHtml(ssid)}
+                        ${connected ? '<span style="color:#60a5fa;font-size:11px;margin-left:4px;">● Verbunden</span>' : ''}
+                    </div>
+                    <div style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:6px;margin-top:2px;">
+                        <span>${signalBars}</span>
+                        <span>${isOpen ? '🔓 Offen' : '🔒 ' + escapeHtml(security)}</span>
+                    </div>
+                </div>
+                <button type="button" class="secondary" style="min-height:28px;padding:2px 8px;font-size:12px;width:auto;margin:0;" onclick="event.stopPropagation();selectStartpageNetwork(${index})">Auswählen</button>
+            </div>
+        `;
+    }).join('');
+}
+
+function selectStartpageNetwork(index) {
+    const net = startpageNetworks[index];
+    if (!net || !net.ssid) return;
+    const ssidField = document.getElementById('startSsid');
+    const passField = document.getElementById('startPass');
+    if (ssidField) ssidField.value = net.ssid;
+    if (passField) {
+        passField.value = '';
+        passField.focus();
+    }
+}
+
+async function scanWifiStartpage() {
+    const spinner = document.getElementById('startScanSpinner');
+    const label = document.getElementById('startScanLabel');
+    const btn = document.getElementById('startScanBtn');
+    if (spinner) spinner.style.display = 'inline-block';
+    if (label) label.textContent = 'Scannt…';
+    if (btn) btn.disabled = true;
+
+    try {
+        const res = await fetch('/api/wifi/scan', { method: 'POST' });
+        const data = await res.json().catch(() => ({}));
+        const networks = data.networks || [];
+        renderStartpageNetworks(networks);
+    } catch (e) {
+        const list = document.getElementById('startpageNetworkList');
+        if (list) {
+            list.innerHTML = '<div style="text-align:center;padding:12px;color:#f87171;font-size:12px;">Scan fehlgeschlagen. Bitte erneut versuchen.</div>';
+        }
+    } finally {
+        if (spinner) spinner.style.display = 'none';
+        if (label) label.textContent = '🔍 Scannen';
+        if (btn) btn.disabled = false;
+    }
+}
+
+let startpagePollingInterval = null;
+
+function stopAutoReloadPollingStartpage() {
+    if (startpagePollingInterval) {
+        clearInterval(startpagePollingInterval);
+        startpagePollingInterval = null;
+    }
+}
+
+function startAutoReloadPollingStartpage(ssid) {
+    stopAutoReloadPollingStartpage();
+    let attempts = 0;
+    const maxAttempts = 90;
+
+    const interval = startpagePollingInterval = setInterval(async () => {
+        attempts++;
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 1500);
+            const res = await fetch('http://autodarts.local/health?t=' + Date.now(), {
+                signal: controller.signal,
+                cache: 'no-store',
+                mode: 'cors'
+            });
+            clearTimeout(timeoutId);
+
+            if (res.ok) {
+                clearInterval(interval);
+                document.getElementById('connectingTitle').textContent = 'Erfolgreich verbunden! 🎉';
+                document.getElementById('connectingText').innerHTML =
+                    'Die Autodarts-Box ist im Heimnetzwerk erreichbar.<br><br>' +
+                    '<div style="color:#4ade80;font-weight:600;font-size:16px;">Lade http://autodarts.local…</div>';
+                setTimeout(() => {
+                    window.location.href = 'http://autodarts.local';
+                }, 1000);
+                return;
+            }
+        } catch (_) {}
+
+        const textEl = document.getElementById('connectingText');
+        if (textEl) {
+            textEl.innerHTML =
+                `1. Verbinde dieses Gerät wieder mit <strong>„${escapeHtml(ssid)}“</strong>.<br><br>` +
+                `Warte auf Verbindung im Heimnetzwerk… (Versuch ${attempts})<br>` +
+                `<small style="color:#94a3b8;">Sobald dein Gerät im WLAN ist, lädt die Seite automatisch.</small><br><br>` +
+                `<a href="http://autodarts.local" class="primary" style="display:inline-block;padding:10px 18px;border-radius:12px;text-decoration:none;color:white;font-weight:600;">Jetzt manuell öffnen</a>`;
+        }
+
+        if (attempts >= maxAttempts) {
+            clearInterval(interval);
+        }
+    }, 2000);
+}
+
+async function connectWifiStartpage(event) {
+    event.preventDefault();
+
+    const ssid = document.getElementById('startSsid').value.trim();
+    const password = document.getElementById('startPass').value;
+
+    if (!ssid) return;
+
+    // Umschalten auf die Verbindungsstatus-Ansicht
+    document.getElementById('hotspotSetupContent').style.display = 'none';
+    document.getElementById('hotspotConnectingContent').style.display = 'block';
+
+    document.getElementById('connectingTitle').textContent = 'WLAN wird eingerichtet…';
+    document.getElementById('connectingText').innerHTML =
+        `Das WLAN-Profil für <strong>„${escapeHtml(ssid)}“</strong> wird gespeichert.<br><br>` +
+        `⚠️ <strong>Wichtiger Hinweis:</strong><br>` +
+        `Der Einrichtungs-Hotspot wird jetzt beendet, damit sich die Box mit deinem Heimnetzwerk verbindet.<br><br>` +
+        `1. Bitte verbinde dein Endgerät wieder mit deinem WLAN <strong>„${escapeHtml(ssid)}“</strong>.<br>` +
+        `2. Die Seite lädt automatisch, sobald die Box im Netzwerk erreichbar ist.`;
+
+    startAutoReloadPollingStartpage(ssid);
+
+    try {
+        const response = await fetch('/api/wifi/connect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ssid, password })
+        });
+        if (!response.ok) {
+            // Eingabe abgelehnt (z. B. Passwort zu kurz): zurück zum Formular.
+            const data = await response.json().catch(() => ({}));
+            stopAutoReloadPollingStartpage();
+            document.getElementById('hotspotConnectingContent').style.display = 'none';
+            document.getElementById('hotspotSetupContent').style.display = 'block';
+            const box = document.getElementById('lastConnectError');
+            if (box) {
+                box.textContent = '⚠️ ' + (data.error || data.message || 'Verbindung konnte nicht eingerichtet werden.');
+                box.style.display = 'block';
+            }
+        }
+    } catch (err) {
+        // Im Hotspot-Modus bricht der Socket beim Umschalten des Interfaces planmäßig ab.
+        // Polling läuft bereits im Hintergrund weiter.
+    }
+}
+
+async function checkNetworkStateOnLoad() {
+    try {
+        const response = await fetch('/api/wifi/state', { cache: 'no-store' });
+        if (!response.ok) {
+            if (window.location.hostname === '192.168.4.1') {
+                showHotspotUI();
+            }
+            return;
+        }
+        const state = await response.json();
+        const isHotspot = Boolean(state.hotspot_active) || window.location.hostname === '192.168.4.1';
+
+        if (isHotspot) {
+            showLastConnectError(state.last_connect);
+            showHotspotUI(state.available_networks);
+        }
+    } catch (e) {
+        if (window.location.hostname === '192.168.4.1') {
+            showHotspotUI();
+        }
+    }
+}
+
+function showLastConnectError(lastConnect) {
+    const box = document.getElementById('lastConnectError');
+    if (!box) return;
+    if (lastConnect && lastConnect.pending === false && lastConnect.success === false) {
+        box.innerHTML =
+            `⚠️ Die Verbindung mit <strong>„${escapeHtml(lastConnect.ssid)}“</strong> ist fehlgeschlagen. ` +
+            `Bitte Passwort prüfen und erneut versuchen.`;
+        box.style.display = 'block';
+    } else {
+        box.style.display = 'none';
+    }
+}
+
+function showHotspotUI(networks = null) {
+    const banner = document.getElementById('hotspotBanner');
+    if (banner) banner.style.display = 'block';
+
+    showDialog('hotspotWifiOverlay');
+
+    if (Array.isArray(networks) && networks.length > 0) {
+        renderStartpageNetworks(networks);
+    } else {
+        scanWifiStartpage();
+    }
+}
+
+function alignIndexButtons() {
+    if (window.innerWidth <= 767) {
+        document.querySelectorAll('.card-header-block').forEach(el => el.style.minHeight = 'auto');
+        return;
+    }
+    const headers = document.querySelectorAll('.card-header-block');
+    if (headers.length >= 2) {
+        headers[0].style.minHeight = 'auto';
+        headers[1].style.minHeight = 'auto';
+        const maxHeaderHeight = Math.max(headers[0].offsetHeight, headers[1].offsetHeight, 88);
+        headers[0].style.minHeight = maxHeaderHeight + 'px';
+        headers[1].style.minHeight = maxHeaderHeight + 'px';
+    }
+}
+
+function triggerTitleRepaint() {
+    const title = document.querySelector('.page-title');
+    if (title) {
+        title.style.transform = 'translateZ(0)';
+        void title.offsetHeight;
+        requestAnimationFrame(() => {
+            title.style.transform = '';
+        });
+    }
+}
+
+window.addEventListener('resize', alignIndexButtons);
+window.addEventListener('load', () => {
+    alignIndexButtons();
+    triggerTitleRepaint();
+});
+
+// --- Autodarts-Status, Board-Manager & Autostart ---
+let boardManagerPort = 3180;
+let boardStatusTimer = null;
+
+function boardManagerUrl() {
+    return `${window.location.protocol}//${window.location.hostname}:${boardManagerPort}/`;
+}
+
+function openBoardManager() {
+    window.open(boardManagerUrl(), '_blank');
+}
+
+function setBoardStatus(kind, text) {
+    const box = document.getElementById('boardStatus');
+    const label = document.getElementById('boardStatusText');
+    if (!box || !label) return;
+    box.classList.remove('ok', 'wait', 'error');
+    if (kind) box.classList.add(kind);
+    label.textContent = text;
+}
+
+function scheduleBoardStatus(ms) {
+    if (boardStatusTimer) clearTimeout(boardStatusTimer);
+    boardStatusTimer = setTimeout(loadAutodartsStatus, ms);
+}
+
+async function loadAutodartsStatus() {
+    const tuiFallback = document.getElementById('tuiFallback');
+    const autostartFix = document.getElementById('autostartFix');
+    const bmButton = document.getElementById('boardManagerBtn');
+    let status;
+    try {
+        const response = await fetch('/api/autodarts', { cache: 'no-store' });
+        status = await response.json();
+        if (!response.ok) throw new Error(status.error || `HTTP ${response.status}`);
+    } catch (e) {
+        setBoardStatus('error', 'Autodarts-Status nicht abrufbar.');
+        scheduleBoardStatus(15000);
+        return;
+    }
+
+    if (status.board_manager_port) boardManagerPort = status.board_manager_port;
+    const service = status.service || {};
+    const serviceOk = service.enabled === 'enabled' || service.enabled === 'enabled-runtime';
+
+    if (!status.installed) {
+        setBoardStatus('error', 'Autodarts ist nicht installiert.');
+        if (bmButton) bmButton.disabled = true;
+        tuiFallback.style.display = 'none';
+        autostartFix.style.display = 'none';
+        scheduleBoardStatus(30000);
+        return;
+    }
+    // Button erst freigeben, wenn der Board-Manager tatsächlich antwortet.
+    if (bmButton) bmButton.disabled = !status.board_manager_reachable;
+
+    if (status.board_manager_reachable) {
+        setBoardStatus('ok', 'Autodarts läuft – Board-Manager bereit.');
+        tuiFallback.style.display = 'none';
+    } else if (status.running) {
+        // Board läuft, aber ohne Weboberfläche (z. B. Autodarts 2.0): Terminal als Fallback.
+        setBoardStatus('wait', 'Autodarts läuft, der Board-Manager antwortet nicht.');
+        tuiFallback.style.display = 'flex';
+    } else {
+        setBoardStatus('wait', serviceOk ? 'Autodarts startet …' : 'Autodarts läuft nicht.');
+        tuiFallback.style.display = 'none';
+    }
+
+    autostartFix.style.display = serviceOk ? 'none' : 'flex';
+    scheduleBoardStatus(status.board_manager_reachable ? 30000 : 5000);
+}
+
+async function setupAutostart() {
+    const btn = document.getElementById('autostartBtn');
+    if (btn) btn.disabled = true;
+    try {
+        const response = await fetch('/api/autodarts/autostart', { method: 'POST' });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.ok) {
+            alert('Autostart konnte nicht eingerichtet werden: ' + (data.reason || `HTTP ${response.status}`));
+        }
+    } catch (e) {
+        alert('Autostart konnte nicht eingerichtet werden.');
+    } finally {
+        if (btn) btn.disabled = false;
+        loadAutodartsStatus();
+    }
+}
+
+// Initialer Check beim Laden der Seite
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        checkNetworkStateOnLoad();
+        loadAutodartsStatus();
+        alignIndexButtons();
+        triggerTitleRepaint();
+    });
+} else {
+    checkNetworkStateOnLoad();
+    loadAutodartsStatus();
+    alignIndexButtons();
+    triggerTitleRepaint();
+}
+
+</script>
+
+</body>
+</html>
+
+
+
+
+

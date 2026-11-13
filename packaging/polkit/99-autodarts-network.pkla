@@ -1,0 +1,8 @@
+# Autodarts Headless Control – für polkit < 0.106 (z. B. Ubuntu 22.04),
+# das die JavaScript-Regeln in /etc/polkit-1/rules.d nicht auswertet.
+[Autodarts Headless Control]
+Identity=unix-user:autodarts
+Action=org.freedesktop.NetworkManager.settings.modify.system;org.freedesktop.NetworkManager.settings.modify.own;org.freedesktop.NetworkManager.network-control;org.freedesktop.NetworkManager.wifi.scan;org.freedesktop.NetworkManager.enable-disable-network;org.freedesktop.NetworkManager.wifi.share.protected;org.freedesktop.NetworkManager.wifi.share.open;org.freedesktop.login1.reboot;org.freedesktop.login1.reboot-multiple-sessions;org.freedesktop.login1.reboot-ignore-inhibit;org.freedesktop.login1.power-off;org.freedesktop.login1.power-off-multiple-sessions;org.freedesktop.login1.power-off-ignore-inhibit
+ResultAny=yes
+ResultInactive=yes
+ResultActive=yes

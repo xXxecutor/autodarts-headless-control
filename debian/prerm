@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -e
+
+[ -d /run/systemd/system ] || exit 0
+
+case "$1" in
+    remove|deconfigure)
+        systemctl disable --now autodarts-headless-control.service 2>/dev/null || true
+        systemctl disable --now autodarts-update.timer 2>/dev/null || true
+        systemctl disable --now autodarts-headless-control-update.timer 2>/dev/null || true
+        ;;
+    upgrade|failed-upgrade)
+        systemctl stop autodarts-headless-control.service 2>/dev/null || true
+        ;;
+    *)
+        ;;
+esac
+
+exit 0

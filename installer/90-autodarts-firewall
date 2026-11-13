@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -u
+
+interface="${1:-none}"
+event="${2:-${NM_DISPATCHER_ACTION:-unknown}}"
+
+case "$event" in
+    up|down|connectivity-change|dhcp4-change|vpn-up|vpn-down)
+        logger -t autodarts-dispatcher -p daemon.info "Verarbeite Netzwerk-Event: action=$event interface=$interface"
+        /usr/local/sbin/autodarts-firewall-sync
+        ;;
+esac
+
+exit 0

@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.env
+# Python packaging artifacts
+*.egg-info/
+build/
+dist/

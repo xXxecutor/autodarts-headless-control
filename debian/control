@@ -1,0 +1,13 @@
+Package: autodarts-headless-control
+Version: 1.0.0
+Section: utils
+Priority: optional
+Architecture: all
+Depends: python3 (>= 3.10), python3-venv, network-manager, dnsmasq-base, avahi-daemon, avahi-utils, ufw, iw, iproute2, curl, ca-certificates, polkitd | policykit-1
+Maintainer: Autodarts Headless Control <https://github.com/xXxecutor/autodarts-headless-control>
+Homepage: https://github.com/xXxecutor/autodarts-headless-control
+Description: Headless control and web management for Autodarts
+ Reliable browser-based control for Autodarts on Linux mini-PCs
+ and single-board computers (Raspberry Pi, x86_64, ARM64).
+ Provides web interface, WiFi management with hotspot fallback,
+ systemd integration and Autodarts autostart without monitor or keyboard.

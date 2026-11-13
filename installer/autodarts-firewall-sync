@@ -1,0 +1,262 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+STATE_DIR="/var/lib/autodarts-headless-control-firewall"
+STATE_FILE="$STATE_DIR/active-state"
+LOCK_FILE="/run/autodarts-firewall-sync.lock"
+ENV_FILE="/etc/autodarts-headless-control.env"
+
+log() {
+    logger -t autodarts-firewall-sync -- "$*"
+}
+
+# Verhindert parallele Ausführungen durch mehrere NetworkManager-Events.
+exec 9>"$LOCK_FILE"
+flock -n 9 || exit 0
+
+[[ $EUID -eq 0 ]] || exit 1
+# Ohne ufw (z. B. firewalld auf Fedora/openSUSE) gibt es nichts zu synchronisieren.
+command -v ufw >/dev/null 2>&1 || exit 0
+command -v ip >/dev/null 2>&1 || exit 1
+command -v nmcli >/dev/null 2>&1 || exit 1
+
+# Ports aus der Konfiguration (z. B. 8080, falls Port 80 belegt war)
+read_port() {
+    local value
+    value="$(grep -E "^[[:space:]]*$1[[:space:]]*=" "$ENV_FILE" 2>/dev/null | tail -n1 | tr -cd '0-9')"
+    printf '%s\n' "${value:-$2}"
+}
+HTTP_PORT="$(read_port HEADLESS_HTTP_PORT 80)"
+WS_PORT="$(read_port HEADLESS_WS_PORT 8092)"
+
+mkdir -p "$STATE_DIR"
+chmod 700 "$STATE_DIR"
+
+# Entfernt nur Regeln, die anhand ihrer Autodarts-Kommentare
+# eindeutig diesem Skript bzw. dem bisherigen Installer zugeordnet sind.
+remove_managed_rules() {
+    local -a numbers=()
+    local line number
+
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^\[[[:space:]]*([0-9]+)\] ]]; then
+            number="${BASH_REMATCH[1]}"
+
+            case "$line" in
+                *"# Autodarts HTTP LAN"*|\
+                *"# Autodarts WebSocket LAN"*|\
+                *"# Autodarts Board-Manager LAN"*|\
+                *"# Autodarts HTTP Hotspot"*|\
+                *"# Autodarts WebSocket Hotspot"*|\
+                *"# Autodarts Board-Manager Hotspot"*|\
+                *"# Autodarts mDNS LAN"*|\
+                *"# Autodarts mDNS Hotspot"*|\
+                *"# Autodarts DNS Hotspot"*|\
+                *"# Autodarts DHCP Hotspot"*|\
+                *"# mDNS (Avahi)"*)
+                    numbers+=("$number")
+                    ;;
+            esac
+        fi
+    done < <(LC_ALL=C ufw status numbered)
+
+    # Rückwärts löschen, damit sich die übrigen Regelnummern
+    # nicht auf die noch ausstehenden Löschvorgänge auswirken.
+    for ((i=${#numbers[@]}-1; i>=0; i--)); do
+        ufw --force delete "${numbers[$i]}" >/dev/null
+    done
+}
+
+# Liefert das erste aktive Autodarts-Hotspot-Gerät, sofern es
+# tatsächlich die erwartete Gateway-Adresse besitzt.
+find_hotspot_interface() {
+    local device type state connection addresses
+
+    while IFS=: read -r device type state; do
+        [[ "$type" == "wifi" && "$state" == "connected" ]] || continue
+
+        connection="$(nmcli -g GENERAL.CONNECTION device show "$device" 2>/dev/null || true)"
+        [[ "$connection" == autodarts-hotspot-* ]] || continue
+
+        addresses="$(ip -o -4 addr show dev "$device" scope global 2>/dev/null || true)"
+        if grep -qE 'inet 192\.168\.4\.1/24([[:space:]]|$)' <<<"$addresses"; then
+            printf '%s\n' "$device"
+            return 0
+        fi
+    done < <(nmcli -t -f DEVICE,TYPE,STATE device status 2>/dev/null)
+
+    return 1
+}
+
+# Ermittelt das Subnetz einer regulären Ethernet- oder WLAN-Verbindung.
+find_lan() {
+    local device type cidr subnet
+
+    device="$(ip -4 route show default | awk 'NR == 1 {print $5}')"
+    [[ -n "$device" ]] || return 1
+
+    type="$(nmcli -g GENERAL.TYPE device show "$device" 2>/dev/null || true)"
+    case "$type" in
+        ethernet|wifi) ;;
+        *) return 1 ;;
+    esac
+
+    cidr="$(
+        ip -o -4 addr show dev "$device" scope global |
+        awk '$4 !~ /^169\.254\./ {print $4; exit}'
+    )"
+    [[ -n "$cidr" ]] || return 1
+
+    subnet="$(
+        python3 -c 'import ipaddress,sys; print(ipaddress.ip_interface(sys.argv[1]).network)' "$cidr"
+    )"
+
+    # Keine pauschalen Freigaben für ungewöhnlich große Netze.
+    # Solche Konfigurationen müssen ausdrücklich geprüft werden.
+    python3 - "$subnet" <<'PY'
+import ipaddress
+import sys
+
+network = ipaddress.ip_network(sys.argv[1], strict=False)
+if network.version != 4 or network.prefixlen < 16:
+    sys.exit(1)
+PY
+
+    printf '%s|%s\n' "$device" "$subnet"
+}
+
+# Passt allow-interfaces in /etc/avahi/avahi-daemon.conf gezielt an,
+# sichert vor der ersten Änderung das Original und vermeidet blindes Überschreiben.
+sync_avahi_interface() {
+    local target_iface="$1"
+    local conf="/etc/avahi/avahi-daemon.conf"
+    local orig="/etc/avahi/avahi-daemon.conf.orig"
+
+    [[ -f "$conf" ]] || return 0
+
+    if [[ ! -f "$orig" ]]; then
+        cp -p "$conf" "$orig"
+    fi
+
+    local ret=0
+    python3 - "$conf" "$target_iface" <<'PY' || ret=$?
+import sys
+import tempfile
+import os
+
+conf_path = sys.argv[1]
+target_iface = sys.argv[2]
+
+with open(conf_path, "r", encoding="utf-8") as f:
+    lines = f.readlines()
+
+new_lines = []
+in_server = False
+found_key = False
+modified = False
+
+for line in lines:
+    stripped = line.strip()
+    if stripped.startswith("[") and stripped.endswith("]"):
+        if in_server and not found_key:
+            new_lines.append(f"allow-interfaces={target_iface}\n")
+            found_key = True
+            modified = True
+        in_server = (stripped.lower() == "[server]")
+        new_lines.append(line)
+        continue
+
+    if in_server and (stripped.startswith("allow-interfaces=") or stripped.startswith("#allow-interfaces=")):
+        new_line = f"allow-interfaces={target_iface}\n"
+        if line != new_line:
+            modified = True
+        new_lines.append(new_line)
+        found_key = True
+    else:
+        new_lines.append(line)
+
+if in_server and not found_key:
+    new_lines.append(f"allow-interfaces={target_iface}\n")
+    modified = True
+
+if modified:
+    dir_name = os.path.dirname(conf_path)
+    with tempfile.NamedTemporaryFile("w", dir=dir_name, delete=False, encoding="utf-8") as tf:
+        tf.writelines(new_lines)
+        temp_name = tf.name
+    st = os.stat(conf_path)
+    os.chmod(temp_name, st.st_mode)
+    os.chown(temp_name, st.st_uid, st.st_gid)
+    os.replace(temp_name, conf_path)
+    sys.exit(10)
+sys.exit(0)
+PY
+    if [[ $ret -eq 10 ]]; then
+        log "Avahi-Interface aktualisiert: allow-interfaces=$target_iface"
+        if command -v systemctl >/dev/null 2>&1; then
+            systemctl try-restart avahi-daemon >/dev/null 2>&1 || true
+        fi
+    fi
+}
+
+mode="none"
+interface=""
+subnet=""
+
+if interface="$(find_hotspot_interface)"; then
+    mode="hotspot"
+    subnet="192.168.4.0/24"
+else
+    lan="$(find_lan || true)"
+    if [[ -n "$lan" ]]; then
+        interface="${lan%%|*}"
+        subnet="${lan#*|}"
+        mode="lan"
+    fi
+fi
+
+# Regelsatz-Version im Zustand: Ändern sich die Regeln (z. B. neuer Port),
+# werden bestehende Installationen beim nächsten Lauf automatisch aktualisiert.
+RULESET_VERSION="3"
+desired_state="$mode|$interface|$subnet|v$RULESET_VERSION|$HTTP_PORT|$WS_PORT"
+current_state="$(cat "$STATE_FILE" 2>/dev/null || true)"
+
+# Unverändertes Netzwerk: keine unnötigen Regeländerungen.
+if [[ "$desired_state" == "$current_state" ]]; then
+    exit 0
+fi
+
+# Alte Autodarts-Regeln und die frühere globale mDNS-Freigabe
+# entfernen, danach nur den aktuell gewünschten Pfad freigeben.
+remove_managed_rules
+
+if [[ "$mode" != "none" ]]; then
+    ufw allow in on "$interface" from "$subnet" to any port "$HTTP_PORT" proto tcp \
+        comment "Autodarts HTTP $([[ $mode == hotspot ]] && echo Hotspot || echo LAN)"
+
+    ufw allow in on "$interface" from "$subnet" to any port "$WS_PORT" proto tcp \
+        comment "Autodarts WebSocket $([[ $mode == hotspot ]] && echo Hotspot || echo LAN)"
+
+    # Offizieller Autodarts Board-Manager (Weboberfläche ab Autodarts 2.1).
+    ufw allow in on "$interface" from "$subnet" to any port 3180 proto tcp \
+        comment "Autodarts Board-Manager $([[ $mode == hotspot ]] && echo Hotspot || echo LAN)"
+
+    ufw allow in on "$interface" from "$subnet" to any port 5353 proto udp \
+        comment "Autodarts mDNS $([[ $mode == hotspot ]] && echo Hotspot || echo LAN)"
+
+    if [[ "$mode" == "hotspot" ]]; then
+        ufw allow in on "$interface" to any port 53 \
+            comment "Autodarts DNS Hotspot"
+        ufw allow in on "$interface" to any port 67 proto udp \
+            comment "Autodarts DHCP Hotspot"
+    fi
+
+    sync_avahi_interface "$interface"
+
+    log "Aktiver Zugang: mode=$mode interface=$interface subnet=$subnet"
+else
+    log "Kein geeignetes aktives LAN oder Autodarts-Hotspot gefunden; Autodarts-Zugriffsregeln entfernt."
+fi
+
+printf '%s\n' "$desired_state" > "$STATE_FILE"
+chmod 600 "$STATE_FILE"
