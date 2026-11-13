@@ -242,6 +242,11 @@ jobs:
           UNIT=/var/lib/autodarts-headless-control/.config/systemd/user/autodarts.service
           for i in $(seq 1 60); do sudo test -f "$UNIT" && break; sleep 2; done
           sudo cat "$UNIT"
+          # Die App schreibt zuerst die Unit und aktiviert sie direkt danach – kurz warten.
+          for i in $(seq 1 30); do
+            sudo -u autodarts env "$RUNTIME" systemctl --user is-enabled autodarts.service >/dev/null 2>&1 && break
+            sleep 1
+          done
           sudo -u autodarts env "$RUNTIME" systemctl --user is-enabled autodarts.service
           sleep 15
           sudo -u autodarts env "$RUNTIME" systemctl --user status autodarts.service --no-pager || true
