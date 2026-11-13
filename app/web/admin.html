@@ -516,7 +516,7 @@
         <div class="setting">
             <div>
                 <strong id="autoUpdateLabel">Automatische Updates</strong>
-                <span id="autoUpdateText">Hält Headless Control und Autodarts aktuell (täglich nachts).</span>
+                <span id="autoUpdateText">Sucht jede Nacht nach Updates für Headless Control und Autodarts.</span>
             </div>
             <button type="button" class="switch" id="autoUpdateSwitch" role="switch" aria-checked="false"
                     aria-labelledby="autoUpdateLabel" onclick="toggleAutoUpdate()" disabled></button>
@@ -710,8 +710,8 @@ function renderAutoUpdate(enabled, locked) {
     document.getElementById('autoUpdateText').textContent = locked
         ? 'In /etc/autodarts-headless-control.env abgeschaltet (HEADLESS_AUTO_UPDATE=0).'
         : enabled
-            ? 'An: Headless Control und Autodarts werden täglich nachts aktualisiert.'
-            : 'Aus: Es werden keine Updates installiert, auch nicht für Autodarts.';
+            ? 'An: Jede Nacht wird nach Updates für Headless Control und Autodarts gesucht.'
+            : 'Aus: Es wird nicht nach Updates gesucht, auch nicht für Autodarts.';
 }
 
 async function toggleAutoUpdate() {

@@ -73,7 +73,7 @@ Das dauert je nach Internetverbindung einige Minuten. Der Installer richtet alle
 * Die Adresse `http://autodarts.local`, die Firewall und passwortlose Rechte für WLAN, Neustart und Herunterfahren
 * Ein bereits eingerichtetes WLAN wird an NetworkManager übergeben, damit WLAN-Einrichtung und Setup-Hotspot funktionieren
 * Autodarts selbst (headless) – inklusive Autostart als Hintergrunddienst
-* Automatische Updates für Autodarts und Headless Control (täglich, ohne dein Zutun)
+* Automatische Updates für Autodarts und Headless Control (jede Nacht wird nach Updates gesucht, ohne dein Zutun)
 
 Starte den Rechner anschließend einmal neu:
 ```bash
@@ -143,7 +143,7 @@ Bevor du das Gerät einpackst:
 * Auch bei Aktionen in der Weboberfläche (wie Neustart, Herunterfahren oder WLAN-Verbindung) ist durch die vorkonfigurierten Polkit-Rechte keine Passworteingabe am Gerät erforderlich.
 
 ### 5. Muss ich Updates selbst installieren?
-* **Nein.** Autodarts und Autodarts Headless Control aktualisieren sich einmal täglich automatisch, sobald die Box mit dem Internet verbunden ist. Die installierte Version siehst du unter `http://autodarts.local/admin` im Bereich **System-Informationen**.
+* **Nein.** Die Box sucht jede Nacht nach Updates für Autodarts und Autodarts Headless Control und installiert sie, sobald sie mit dem Internet verbunden ist. Die installierte Version und den Schalter **Automatische Updates** findest du unter `http://autodarts.local/admin` im Bereich **System**.
 
 ### 6. Ich habe zwei Boxen im selben Netzwerk – wie erreiche ich die zweite?
 * Beide melden sich als `autodarts.local`; die zweite Box weicht automatisch auf `autodarts-2.local` aus. Alternativ hilft die IP-Adresse aus der Router-Übersicht.

@@ -112,7 +112,7 @@ Optionen (an `sudo bash -s --` anhängen, z. B. `… | sudo bash -s -- --beta`):
 | `--skip-autodarts` | nur Headless Control installieren, Autodarts nicht |
 | `--uninstall` | Headless Control entfernen |
 
-**Updates laufen automatisch:** Einmal täglich prüft jedes Gerät, ob es eine neue Version von Headless Control gibt, und installiert sie selbstständig; Autodarts aktualisiert sich ebenfalls täglich. Niemand muss dafür etwas tun. Lokale Anpassungen in `/etc/autodarts-headless-control.env` bleiben erhalten. Ein- und ausschalten lassen sich die Updates (Headless Control und Autodarts) in der Admin-Oberfläche unter „System“ → „Automatische Updates“; dort steht auch die installierte Version. Fest abschalten lassen sich die Updates von Headless Control mit `HEADLESS_AUTO_UPDATE=0` in der Konfigurationsdatei – der Schalter ist dann gesperrt.
+**Updates laufen automatisch:** Jede Nacht sucht jedes Gerät nach einer neuen Version von Headless Control und von Autodarts und installiert sie selbstständig. Niemand muss dafür etwas tun. Lokale Anpassungen in `/etc/autodarts-headless-control.env` bleiben erhalten. Ein- und ausschalten lassen sich die Updates (Headless Control und Autodarts) in der Admin-Oberfläche unter „System“ → „Automatische Updates“; dort steht auch die installierte Version. Fest abschalten lassen sich die Updates von Headless Control mit `HEADLESS_AUTO_UPDATE=0` in der Konfigurationsdatei – der Schalter ist dann gesperrt.
 
 ### Alternative: Paket manuell herunterladen (Debian/Ubuntu/Raspberry Pi OS)
 
