@@ -50,6 +50,15 @@ Autodarts Headless Control läuft auf praktisch jedem aktuellen 64-Bit-Linux mit
 
 „Getestet“ bedeutet: Installation, Start der Weboberfläche, Update und Deinstallation laufen bei jeder Änderung automatisch in der CI ([GitHub Actions](.github/workflows/ci.yml)). WLAN, Hotspot und Kameras lassen sich dort nicht prüfen – sie hängen vor allem von NetworkManager und der Hardware ab.
 
+### Auf echter Hardware geprüft
+
+| Gerät | System | Geprüft |
+|---|---|---|
+| HP t630 Thin Client (AMD, x86_64) | Debian 13 (Trixie) | Installation per Einzeiler, Autodarts-Autostart, Weboberfläche und Board-Manager über LAN und WLAN, Neustarts |
+| Raspberry Pi 4 Model B (ARM64) | Raspberry Pi OS 64-Bit (Trixie) | wie oben, dazu Setup-Hotspot mit einem Android-Handy und „Gerät übergeben“ |
+
+Noch nicht auf echter Hardware geprüft: Ubuntu, Fedora, Arch und openSUSE (nur in der CI), die Einrichtung über den Setup-Hotspot mit einem iPhone sowie Kameras und Kalibrierung. Erfahrungsberichte – auch „läuft“ – gern als [Issue](https://github.com/xXxecutor/autodarts-headless-control/issues).
+
 > **Hinweis:** Autodarts selbst gibt es nur für 64-Bit-Systeme (x86_64 und ARM64). Auf einem Raspberry Pi daher unbedingt die 64-Bit-Variante von Raspberry Pi OS verwenden.
 
 ### Systemvoraussetzungen
@@ -58,6 +67,7 @@ Die Abhängigkeiten installiert der Installer automatisch:
 
 - **Init-System:** `systemd` (Dienste, `journalctl`, `systemd-logind`)
 - **Netzwerk:** `NetworkManager` verwaltet das WLAN (Voraussetzung für WLAN-Einrichtung und Setup-Hotspot). Bei Raspberry Pi OS, Fedora und Desktop-Varianten ist das Standard. Bei Server-Installationen übernimmt der Installer bestehende WLAN-Zugangsdaten automatisch – aus `/etc/network/interfaces` (Debian) bzw. Netplan (Ubuntu Server) – wirksam nach dem Neustart. Nur bei Sonderfällen (WLAN mit fester IP-Adresse, `iwd`/`wicked`/`systemd-networkd` auf Arch oder openSUSE) gibt er stattdessen einen Hinweis; LAN und alle übrigen Funktionen laufen auch dann.
+- **WLAN-Karte für den Setup-Hotspot:** Der Hotspot braucht eine WLAN-Karte mit Access-Point-Modus. Die eingebauten Karten des Raspberry Pi 4/5 und viele Intel- und Realtek-Karten können das, manche USB-WLAN-Sticks nicht. Prüfen lässt es sich mit `iw list` – unter „Supported interface modes“ muss `AP` stehen. Ohne AP-Modus funktioniert alles andere weiterhin; die erste WLAN-Einrichtung erfolgt dann per LAN-Kabel über die Admin-Seite.
 - **Firewall:** `ufw` (Debian/Ubuntu, wird mitinstalliert) oder ein bereits aktives `firewalld` (Fedora, openSUSE, RHEL). Ohne Firewall (z. B. Arch-Standard) sind keine Regeln nötig.
 - **Namensauflösung:** `avahi-daemon` für `http://autodarts.local`
 - **Berechtigungen:** `polkit` für WLAN-Verwaltung, Neustart und Herunterfahren ohne Passwort
