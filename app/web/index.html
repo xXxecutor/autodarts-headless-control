@@ -392,6 +392,10 @@
 
 .fullscreen .spinner { margin-top: 28px; }
 
+/* Kurzer Titel nur auf schmalen Bildschirmen */
+.title-long, .title-short { white-space: nowrap; }
+.title-short { display: none; }
+
 /* Mobil */
 @media (max-width: 720px) {
     /* 1fr: alle Zeilen so hoch wie die höchste, auch wenn Text umbricht */
@@ -399,7 +403,8 @@
 }
 
 @media (max-width: 560px) {
-    .title-rest { display: none; }
+    .title-long { display: none; }
+    .title-short { display: inline; }
     .header-tools { gap: 6px; }
     .tool-btn { width: 36px; }
     .banner .banner-cta { display: none; }
@@ -444,7 +449,7 @@
                 </svg>
             </div>
             <div>
-                <h1>Autodarts<span class="title-rest">-Steuerung</span></h1>
+                <h1><span class="title-long">Autodarts-Steuerung</span><span class="title-short">AD-Steuerung</span></h1>
                 <p>Dein Dartboard auf einen Blick</p>
             </div>
         </div>
