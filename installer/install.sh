@@ -53,8 +53,10 @@ done
 
 [[ "${EUID:-$(id -u)}" -eq 0 ]] || fail "Bitte mit sudo ausführen (ohne sudo: als root per 'su -')."
 [[ -f /etc/os-release ]] || fail "Betriebssystem nicht erkennbar (/etc/os-release fehlt)."
+# Nur in einer Subshell einlesen: os-release definiert u. a. VERSION und würde
+# sonst die gewünschte Release-Version (--version) überschreiben.
 # shellcheck disable=SC1091
-. /etc/os-release
+OS_NAME="$(. /etc/os-release && echo "${PRETTY_NAME:-${ID:-Linux}}")"
 command -v systemctl >/dev/null 2>&1 || fail "systemd wird benötigt."
 
 if command -v apt-get >/dev/null 2>&1 && command -v dpkg >/dev/null 2>&1; then
@@ -68,7 +70,7 @@ elif command -v zypper >/dev/null 2>&1; then
 else
     fail "Keine unterstützte Paketverwaltung gefunden (apt, dnf, pacman, zypper)."
 fi
-log "System: ${PRETTY_NAME:-${ID:-Linux}} (Paketverwaltung: ${PM})"
+log "System: ${OS_NAME} (Paketverwaltung: ${PM})"
 
 # --- Gemeinsame Hilfen ------------------------------------------------------
 
