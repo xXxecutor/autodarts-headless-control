@@ -31,13 +31,15 @@ Du hast eine fertig eingerichtete Autodarts-Box erhalten. Du brauchst **keinen M
 4. Verbinde dich mit:
    * **WLAN-Name (SSID):** `Autodarts-Setup`
    * **Passwort:** `autodarts123`
-5. Öffne nach erfolgreicher Verbindung deinen Webbrowser und rufe auf:
-   👉 **`http://autodarts.local`** (Ersatzadresse falls mDNS nicht reagiert: `http://192.168.4.1`)
-6. Auf der Startseite öffnet sich automatisch das Fenster **WLAN einrichten**:
+5. Die meisten Handys melden sich danach von selbst mit **„Im Netzwerk anmelden“** – antippen öffnet die Einrichtungsseite. Kommt keine Meldung, im Browser aufrufen:
+   👉 **`http://autodarts.local`** (Ersatzadresse falls das nicht klappt: `http://192.168.4.1`)
+6. Unter Android erscheint im Anmeldefenster der Knopf **„Im Browser öffnen“** – am besten antippen: Im Browser bleibt die Seite beim WLAN-Wechsel offen.
+7. Im Fenster **WLAN einrichten**:
    * Wähle dein Heim-WLAN aus der Liste aus (fehlt es, tippe auf **Neu suchen**).
    * Gib dein WLAN-Passwort ein und tippe auf **Mit diesem WLAN verbinden**.
-7. Die Box speichert die Zugangsdaten und verbindet sich mit deinem Heim-WLAN. Der temporäre Einrichtungs-Hotspot schaltet sich automatisch ab.
-8. Verbinde dein Smartphone/Tablet wieder mit deinem normalen Heim-WLAN.
+8. Die Box speichert die Zugangsdaten und verbindet sich mit deinem Heim-WLAN. Der Einrichtungs-Hotspot schaltet sich dabei ab.
+9. Verbinde dein Smartphone/Tablet wieder mit deinem Heim-WLAN und öffne **`http://autodarts.local`** (ein offener Browser-Tab lädt das von selbst).
+   * **Passwort falsch?** Nach etwa 15 Sekunden ist „Autodarts-Setup“ wieder da. Verbinde dich erneut damit und lade die Seite neu – sie zeigt dann, was nicht geklappt hat.
 
 ### Schritt 3: Darts spielen!
 Rufe im Browser einfach künftig auf:
@@ -112,7 +114,7 @@ Bevor du das Gerät einpackst:
 2. Gehe zum Bereich **„Gerät übergeben“**.
 3. Klicke auf den roten Button **„WLAN-Zugangsdaten löschen“** und bestätige mit **„Löschen“**.
 4. **Was das System jetzt tut:**
-   * ✅ Alle über die Weboberfläche gespeicherten WLAN-Verbindungen (`autodarts-*`) werden rückstandsfrei gelöscht.
+   * ✅ Alle gespeicherten WLAN-Verbindungen werden rückstandsfrei gelöscht – auch ein WLAN, das bei der Installation eingetragen wurde (z. B. im Raspberry Pi Imager). LAN-Verbindungen bleiben erhalten.
    * 🛡️ Die Autodarts-Installation, Board-Kalibrierung, Kamera-Einstellungen und das Betriebssystem bleiben zu 100 % erhalten.
    * 🔄 Das Gerät bereitet sich darauf vor, beim nächsten Start beim Empfänger automatisch den Einrichtungs-Hotspot (`Autodarts-Setup`) zu starten, da kein bekanntes WLAN mehr hinterlegt ist.
 

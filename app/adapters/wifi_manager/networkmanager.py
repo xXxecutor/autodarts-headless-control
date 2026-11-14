@@ -20,6 +20,8 @@ HOTSPOT_PREFIX = "autodarts-hotspot-"
 UPLINK_TYPES = {"ethernet", "802-3-ethernet", "wifi", "802-11-wireless"}
 WIFI_TYPES = {"wifi", "802-11-wireless"}
 ACTIVATION_WAIT_SECONDS = 45
+# Zeit für die Seite im Hotspot, den Abschluss-Hinweis noch anzuzeigen.
+ACTIVATION_DELAY_SECONDS = 5.0
 
 
 class NetworkManagerBackend(WifiManagerAdapter):
@@ -246,7 +248,10 @@ class NetworkManagerBackend(WifiManagerAdapter):
         if deferred_activation:
             def _bg_activate():
                 try:
-                    time.sleep(1.0)
+                    # Kurz warten, damit die Seite im Hotspot (oft ein Anmeldefenster
+                    # des Handys, das sich mit dem Hotspot schließt) den letzten
+                    # Hinweis noch anzeigen kann.
+                    time.sleep(ACTIVATION_DELAY_SECONDS)
                     logger.info("Deferred activation: bringing up connection %s on %s", connection_name, interface)
                     res = self._activate(connection_name)
                     if res.returncode == 0:
@@ -449,9 +454,12 @@ class NetworkManagerBackend(WifiManagerAdapter):
         if not self.is_available():
             return ConnectionResult(False, "NetworkManager not available")
 
-        # Only delete if it's an autodarts-managed connection
-        if not (connection_name.startswith("autodarts-") or connection_name.startswith("autodarts-hotspot-")):
-            return ConnectionResult(False, f"Refusing to delete non-autodarts connection: {connection_name}")
+        # Nur Profile von Headless Control oder WLAN-Profile löschen (z. B. vom
+        # Raspberry Pi Imager per netplan); LAN, VPN usw. bleiben unangetastet.
+        if not connection_name.startswith("autodarts-"):
+            kind = self._run(["-g", "connection.type", "connection", "show", connection_name])
+            if kind.returncode != 0 or kind.stdout.strip() not in WIFI_TYPES:
+                return ConnectionResult(False, f"Refusing to delete non-Wi-Fi connection: {connection_name}")
 
         result = self._run(["connection", "delete", connection_name], sudo=True)
 

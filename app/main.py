@@ -32,6 +32,12 @@ HOST = "0.0.0.0"
 PORT = int(os.environ.get("HEADLESS_HTTP_PORT", "80"))
 WEB_ROOT = Path(__file__).resolve().parent / "web"
 HOTSPOT_SUBNET_PREFIX = "192.168.4."
+# autodarts.local statt 192.168.4.1: Lädt der Browser die Seite nach dem
+# WLAN-Wechsel neu, landet er auch im Heimnetz wieder bei der Box.
+HOTSPOT_PORTAL_URL = "http://autodarts.local/"
+# Namen, unter denen die Box selbst angesprochen wird (alles andere ist im
+# Hotspot eine Erreichbarkeitsprüfung des Handys).
+OWN_HOSTNAMES = {"192.168.4.1", "autodarts.local", "autodarts", "localhost", "127.0.0.1", "[::1]"}
 
 # Initialize WiFi Manager Service (singleton for request handlers)
 _wifi_manager_service = WifiManagerService()
@@ -158,8 +164,37 @@ class RequestHandler(BaseHTTPRequestHandler):
     # GET
     # ------------------------------------------------------------------
 
+    def _captive_portal_redirect(self) -> bool:
+        """Send hotspot clients asking for foreign hosts to the setup page.
+
+        Handys prüfen beim Verbinden Adressen wie connectivitycheck.gstatic.com
+        oder captive.apple.com. Im Hotspot löst DNS alles auf die Box auf; eine
+        Umleitung lässt das Handy die Einrichtungsseite von selbst öffnen.
+        """
+        try:
+            client = self.client_address[0]
+        except (AttributeError, IndexError, TypeError):
+            return False
+        if not str(client).startswith(HOTSPOT_SUBNET_PREFIX):
+            return False
+        host = (self.headers.get("Host") or "").strip().lower()
+        if host.startswith("["):
+            host = host.split("]", 1)[0] + "]"
+        else:
+            host = host.rsplit(":", 1)[0] if host.count(":") == 1 else host
+        if not host or host in OWN_HOSTNAMES:
+            return False
+        self.send_response(302)
+        self.send_header("Location", HOTSPOT_PORTAL_URL)
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+        return True
+
     def do_GET(self):
         self._note_client()
+        if self._captive_portal_redirect():
+            return
         route = self.route
 
         if route in STATIC_FILES:
@@ -172,7 +207,13 @@ class RequestHandler(BaseHTTPRequestHandler):
             return
 
         if route == "/health":
-            self._json_response({"status": "ok"})
+            # via_hotspot: Im Hotspot zeigt autodarts.local auf die Box selbst.
+            # Die Startseite darf das nicht als "im Heimnetz erreichbar" werten.
+            try:
+                via_hotspot = str(self.client_address[0]).startswith(HOTSPOT_SUBNET_PREFIX)
+            except (AttributeError, IndexError, TypeError):
+                via_hotspot = False
+            self._json_response({"status": "ok", "via_hotspot": via_hotspot})
             return
 
         if route == "/api/system":

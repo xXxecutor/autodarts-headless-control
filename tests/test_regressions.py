@@ -75,6 +75,20 @@ class TestNetworkManagerFixes(unittest.TestCase):
         self.assertEqual(mock_run.call_count, 1)
 
     @patch("app.adapters.wifi_manager.networkmanager.subprocess.run")
+    def test_delete_connection_allows_only_wifi_profiles(self, mock_run, _which):
+        backend = NetworkManagerBackend()
+        ok = subprocess.CompletedProcess([], 0, stdout="", stderr="")
+
+        mock_run.side_effect = [subprocess.CompletedProcess([], 0, stdout="802-11-wireless\n", stderr=""), ok]
+        self.assertTrue(backend.delete_connection("netplan-wlan0-Orange Citadel").success)
+        self.assertEqual(mock_run.call_args_list[-1][0][0][-3:], ["connection", "delete", "netplan-wlan0-Orange Citadel"])
+
+        mock_run.reset_mock()
+        mock_run.side_effect = [subprocess.CompletedProcess([], 0, stdout="802-3-ethernet\n", stderr="")]
+        self.assertFalse(backend.delete_connection("netplan-eth0").success)
+        self.assertEqual(mock_run.call_count, 1)  # kein "connection delete"
+
+    @patch("app.adapters.wifi_manager.networkmanager.subprocess.run")
     def test_has_uplink_understands_long_type_names(self, mock_run, _which):
         backend = NetworkManagerBackend()
         self.assertTrue(backend.has_uplink([
@@ -187,6 +201,48 @@ class TestMainEndpoints(unittest.TestCase):
         handler.do_GET()
         self.assertEqual(handler.status, 200)
         self.assertEqual(handler.sent_headers.get("Access-Control-Allow-Origin"), "*")
+
+    def test_hotspot_phone_check_is_redirected_to_setup_page(self):
+        # Android/iOS prüfen beim Verbinden fremde Adressen: Umleitung öffnet
+        # die Einrichtungsseite automatisch.
+        for host, path in (
+            ("connectivitycheck.gstatic.com", "/generate_204"),
+            ("captive.apple.com", "/hotspot-detect.html"),
+            ("www.msftconnecttest.com", "/connecttest.txt"),
+        ):
+            handler = self._handler("GET", path, {"Host": host})
+            handler.client_address = ("192.168.4.23", 40000)
+            handler.do_GET()
+            self.assertEqual(handler.status, 302, host)
+            self.assertEqual(handler.sent_headers.get("Location"), "http://autodarts.local/")
+
+    def test_health_tells_whether_request_came_via_hotspot(self):
+        # Die Startseite darf eine Antwort über den Hotspot nicht als
+        # "im Heimnetz erreichbar" werten.
+        handler = self._handler("GET", "/health", {"Host": "autodarts.local"})
+        handler.client_address = ("192.168.4.23", 40000)
+        handler.do_GET()
+        self.assertTrue(json.loads(handler.wfile.getvalue())["via_hotspot"])
+
+        handler = self._handler("GET", "/health", {"Host": "autodarts.local"})
+        handler.do_GET()
+        self.assertFalse(json.loads(handler.wfile.getvalue())["via_hotspot"])
+
+    def test_own_names_and_lan_clients_are_not_redirected(self):
+        handler = self._handler("GET", "/admin", {"Host": "192.168.4.1"})
+        handler.client_address = ("192.168.4.23", 40000)
+        handler.do_GET()
+        self.assertEqual(handler.status, 200)
+
+        handler = self._handler("GET", "/admin", {"Host": "autodarts.local:80"})
+        handler.client_address = ("192.168.4.23", 40000)
+        handler.do_GET()
+        self.assertEqual(handler.status, 200)
+
+        # Im Heimnetz nie umleiten, auch nicht bei fremdem Host-Header.
+        handler = self._handler("GET", "/admin", {"Host": "example.com"})
+        handler.do_GET()
+        self.assertEqual(handler.status, 200)
 
     def test_query_string_does_not_break_page_routes(self):
         handler = self._handler("GET", "/admin?tab=logs")

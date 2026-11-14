@@ -333,7 +333,17 @@
 .connecting .big-icon { color: #38bdf8; margin-bottom: 12px; }
 .connecting .big-icon svg.icon { width: 44px; height: 44px; }
 .connecting h3 { margin: 0 0 10px; font-size: 18px; }
-.connecting p { margin: 0 0 16px; color: #cbd5e1; font-size: 14px; }
+.connecting p, .connecting .connecting-text { margin: 0 0 16px; color: #cbd5e1; font-size: 14px; }
+.connecting .next-steps { text-align: left; margin: 14px auto 14px; padding-left: 22px; max-width: 320px; line-height: 1.6; }
+.connecting .next-steps li { margin: 6px 0; }
+.browser-hint { display: none; margin-bottom: 14px; }
+.browser-hint .btn { margin: 10px 0 8px; }
+.browser-hint small { color: #94a3b8; }
+.after-connect ol { margin: 6px 0 8px; padding-left: 20px; }
+.after-connect li { margin: 3px 0; }
+.after-connect small { color: #94a3b8; }
+.connecting .next-hint { margin: 0 0 14px; font-size: 13px; color: #94a3b8; }
+.connecting .next-address { display: inline-block; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight: 700; color: #f8fafc; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 8px; padding: 1px 8px; }
 
 /* Vollbild-Zustände (Neustart / Herunterfahren) */
 .fullscreen {
@@ -559,6 +569,17 @@
                 Die Box läuft im <strong>Einrichtungs-Modus</strong>. Wähle dein Heim-WLAN aus, damit sie ins Internet kommt und im Heimnetz erreichbar ist.
             </p>
 
+            <!-- Im Anmeldefenster von Android: Wechsel in den Browser anbieten. Ein
+                 Browser-Tab bleibt beim WLAN-Wechsel offen, das Anmeldefenster nicht. -->
+            <div id="browserHint" class="info-box browser-hint">
+                <strong>Tipp: im Browser weitermachen.</strong>
+                Dieses Anmeldefenster schließt sich beim WLAN-Wechsel. Im Browser bleibt die Seite offen
+                und zeigt danach, ob die Verbindung geklappt hat.
+                <a class="btn btn-secondary btn-block" id="browserHintLink"
+                   href="intent://autodarts.local/#Intent;scheme=http;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end">Im Browser öffnen</a>
+                <small>Klappt das nicht: im Browser <strong>autodarts.local</strong> eingeben.</small>
+            </div>
+
             <!-- Ergebnis des letzten Verbindungsversuchs (z. B. falsches Passwort) -->
             <div id="lastConnectError" class="error-box"></div>
 
@@ -589,8 +610,13 @@
                 </button>
             </form>
 
-            <div class="info-box">
-                Danach wird der Hotspot beendet. Verbinde dein Handy oder Tablet wieder mit deinem Heim-WLAN und öffne <a href="http://autodarts.local">http://autodarts.local</a>.
+            <div class="info-box after-connect">
+                <strong>So geht es danach weiter</strong>
+                <ol>
+                    <li>Die Box verbindet sich mit deinem WLAN, dieser Hotspot endet dabei.</li>
+                    <li>Handy wieder mit deinem WLAN verbinden und zu dieser Seite (<strong>autodarts.local</strong>) zurückkehren.</li>
+                </ol>
+                <small>Passwort falsch? Nach etwa 15 Sekunden ist „Autodarts-Setup“ wieder da. Handy erneut damit verbinden und diese Seite neu laden.</small>
             </div>
 
             <div class="dialog-foot">
@@ -603,7 +629,7 @@
         <div id="hotspotConnectingContent" class="connecting">
             <div class="big-icon"><svg class="icon" aria-hidden="true"><use href="#i-wifi"/></svg></div>
             <h3 id="connectingTitle">WLAN wird eingerichtet …</h3>
-            <p id="connectingText"></p>
+            <div id="connectingText" class="connecting-text"></div>
             <div id="connectingSpinner"><span class="spinner"></span></div>
         </div>
     </div>
@@ -904,12 +930,77 @@ function stopAutoReloadPollingStartpage() {
     }
 }
 
+// Abschluss-Hinweis: Im Anmeldefenster des Handys (Hotspot) schließt sich die
+// Seite, sobald die Box den Hotspot beendet. Deshalb stehen die nächsten
+// Schritte so da, dass man sie sich vorher merken kann.
+function nextStepsHtml(ssid) {
+    const name = escapeHtml(ssid);
+    const closes = inAndroidLoginWindow() ? ' und dieses Anmeldefenster schließt sich' : '';
+    return `Die Box verbindet sich in wenigen Sekunden mit <strong>„${name}“</strong>. ` +
+        `Dabei endet der Hotspot${closes}.` +
+        `<ol class="next-steps">` +
+        `<li>Handy wieder mit <strong>„${name}“</strong> verbinden.</li>` +
+        `<li>Zu dieser Seite zurückkehren – sie zeigt dann die Startseite. ` +
+        `Adresse: <span class="next-address">autodarts.local</span></li>` +
+        `</ol>` +
+        `<p class="next-hint">Passwort falsch? Nach etwa 15 Sekunden ist „Autodarts-Setup“ wieder da. ` +
+        `Handy erneut damit verbinden und diese Seite neu laden.</p>`;
+}
+
+function stuckHintHtml(ssid) {
+    const name = escapeHtml(ssid);
+    return `<strong>Noch keine Antwort von der Box.</strong>` +
+        `<ul class="next-steps">` +
+        `<li><strong>Passwort richtig:</strong> Handy mit <strong>„${name}“</strong> verbinden – ` +
+        `diese Seite zeigt dann die Startseite.</li>` +
+        `<li><strong>Passwort falsch:</strong> Handy mit „Autodarts-Setup“ verbinden und diese Seite neu laden – ` +
+        `sie zeigt dann den Fehler. Klappt das nicht, kurz die mobilen Daten ausschalten.</li>` +
+        `</ul>`;
+}
+
+async function showConnectFailureIfAny(ssid) {
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 1500);
+        const res = await fetch('/api/wifi/state?t=' + Date.now(), { signal: controller.signal, cache: 'no-store' });
+        clearTimeout(timeoutId);
+        if (!res.ok) return false;
+        const state = await res.json();
+        const last = state.last_connect;
+        if (!last || last.pending || last.success !== false || last.ssid !== ssid) return false;
+        wifiSwitching = false;
+        document.getElementById('hotspotConnectingContent').style.display = 'none';
+        document.getElementById('hotspotSetupContent').style.display = 'block';
+        showLastConnectError(last);
+        document.getElementById('startPass').value = '';
+        document.getElementById('startPass').focus();
+        return true;
+    } catch (_) {
+        return false;
+    }
+}
+
 function startAutoReloadPollingStartpage(ssid) {
     stopAutoReloadPollingStartpage();
     let attempts = 0;
-    const maxAttempts = 90;
+    const maxAttempts = 300;   // 10 Minuten
+    const startedAt = Date.now();
 
-    const interval = startpagePollingInterval = setInterval(async () => {
+    let checking = false;
+    let interval = null;
+    const finish = () => { clearInterval(interval); if (startpagePollingInterval === interval) startpagePollingInterval = null; };
+    const check = async () => {
+        // Nach Erfolg/Fehler oder wenn die Seite das Warten beendet hat, nichts mehr tun.
+        if (checking || !interval || startpagePollingInterval !== interval) return;
+        checking = true;
+        try { await checkOnce(); } finally { checking = false; }
+    };
+    // Kommt der Tab aus dem Hintergrund zurück (z. B. aus den WLAN-Einstellungen)
+    // oder wechselt das Netz, sofort nachsehen statt auf den nächsten Takt zu warten.
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+    window.addEventListener('online', check);
+
+    const checkOnce = async () => {
         attempts++;
         try {
             const controller = new AbortController();
@@ -921,26 +1012,40 @@ function startAutoReloadPollingStartpage(ssid) {
             });
             clearTimeout(timeoutId);
 
-            if (res.ok) {
-                clearInterval(interval);
+            const health = res.ok ? await res.json().catch(() => ({})) : null;
+            // Im Hotspot zeigt autodarts.local auf die Box selbst: das ist noch
+            // kein Erfolg. Erst eine Antwort aus dem Heimnetz zählt.
+            if (health && !health.via_hotspot) {
+                finish();
                 document.getElementById('connectingTitle').textContent = 'Erfolgreich verbunden!';
                 document.getElementById('connectingText').innerHTML =
-                    'Die Box ist jetzt in deinem Heimnetz erreichbar.<br><strong style="color:#4ade80;">http://autodarts.local wird geladen …</strong>';
+                    'Die Box ist jetzt in deinem Heimnetz.<br><strong style="color:#4ade80;">Startseite wird geladen …</strong>';
                 setTimeout(() => { window.location.href = 'http://autodarts.local'; }, 1000);
                 return;
             }
         } catch (_) {}
 
+        // Ist das Handy wieder im Hotspot (z. B. nach falschem Passwort startet
+        // die Box ihn neu), den Fehler direkt hier anzeigen.
+        if (await showConnectFailureIfAny(ssid)) {
+            finish();
+            return;
+        }
+
+        // Lange keine Antwort: entweder ist die Box noch beim Verbinden, oder das
+        // Passwort war falsch und das Handy sitzt im Heim-WLAN fest.
+        const waitingLong = Date.now() - startedAt > 25000;
+        if (waitingLong) document.getElementById('connectingTitle').textContent = 'Warte auf die Box …';
         document.getElementById('connectingText').innerHTML =
-            `Verbinde dieses Gerät wieder mit <strong>„${escapeHtml(ssid)}“</strong>. ` +
-            `Die Seite lädt automatisch, sobald die Box im Heimnetz erreichbar ist.<br>` +
-            `<small style="color:#94a3b8;">Warte auf Verbindung … (Versuch ${attempts})</small><br><br>` +
-            `<a href="http://autodarts.local" class="btn btn-secondary btn-sm">Jetzt manuell öffnen</a>`;
+            (waitingLong ? stuckHintHtml(ssid) : nextStepsHtml(ssid)) +
+            `<small style="color:#94a3b8;">Diese Seite prüft laufend, ob die Box antwortet.</small><br><br>` +
+            `<button type="button" class="btn btn-secondary btn-sm" onclick="location.reload()">Seite neu laden</button>`;
 
         if (attempts >= maxAttempts) {
-            clearInterval(interval);
+            finish();
         }
-    }, 2000);
+    };
+    interval = startpagePollingInterval = setInterval(check, 2000);
 }
 
 async function connectWifiStartpage(event) {
@@ -953,11 +1058,8 @@ async function connectWifiStartpage(event) {
     wifiSwitching = true;
     document.getElementById('hotspotSetupContent').style.display = 'none';
     document.getElementById('hotspotConnectingContent').style.display = 'block';
-    document.getElementById('connectingTitle').textContent = 'WLAN wird eingerichtet …';
-    document.getElementById('connectingText').innerHTML =
-        `Die Box verbindet sich mit <strong>„${escapeHtml(ssid)}“</strong> und beendet dafür den Einrichtungs-Hotspot.<br><br>` +
-        `Verbinde dein Handy oder Tablet anschließend wieder mit <strong>„${escapeHtml(ssid)}“</strong> – ` +
-        `die Seite lädt dann automatisch.`;
+    document.getElementById('connectingTitle').textContent = 'Fast geschafft!';
+    document.getElementById('connectingText').innerHTML = nextStepsHtml(ssid);
 
     startAutoReloadPollingStartpage(ssid);
 
@@ -1014,8 +1116,15 @@ function showLastConnectError(lastConnect) {
     }
 }
 
+// Android zeigt die Seite im Hotspot in seinem Anmeldefenster (WebView, "; wv)"
+// in der Kennung). Echte Browser haben das nicht.
+function inAndroidLoginWindow() {
+    return /Android/.test(navigator.userAgent) && /; wv\)/.test(navigator.userAgent);
+}
+
 function showHotspotUI(networks = null) {
     document.getElementById('hotspotBanner').style.display = 'flex';
+    document.getElementById('browserHint').style.display = inAndroidLoginWindow() ? 'block' : 'none';
     showDialog('hotspotWifiOverlay');
     if (Array.isArray(networks) && networks.length > 0) {
         renderStartpageNetworks(networks);
