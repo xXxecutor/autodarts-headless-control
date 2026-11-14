@@ -268,8 +268,29 @@ class LinuxAutodartsAdapter(AutodartsAdapter):
         cams = cam.get("cams") if isinstance(cam.get("cams"), list) else []
         return {
             "registered": bool(auth.get("boardId")),
-            "cameras": sum(1 for c in cams if isinstance(c, str) and c.strip()),
+            "cameras": sum(1 for c in cams if self._is_real_camera(c)),
         }
+
+    # Interne Videogeräte des Raspberry-Pi-Chips (Codec, ISP), die Autodarts
+    # ungefragt als Kamera einträgt: Sie liefern kein Kamerabild.
+    _NOT_A_CAMERA = ("bcm2835-codec", "bcm2835-isp", "rpi-hevc", "pispbe")
+
+    @classmethod
+    def _is_real_camera(cls, entry) -> bool:
+        if not isinstance(entry, str) or not entry.strip():
+            return False
+        source = entry.split("=", 1)[1] if "=" in entry else entry
+        source = source.strip()
+        if not source.startswith("/dev/"):
+            return True  # z. B. Netzwerkkamera: nicht prüfbar, zählt
+        device = Path(source)
+        if not device.exists():
+            return False
+        try:
+            name = (Path("/sys/class/video4linux") / device.resolve().name / "name").read_text().strip()
+        except OSError:
+            return True
+        return not name.startswith(cls._NOT_A_CAMERA)
 
     def start(self) -> bool:
         if not self._find_path():

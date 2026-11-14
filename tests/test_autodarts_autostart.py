@@ -136,9 +136,40 @@ class TestAutodartsAutostart(unittest.TestCase):
 
     def test_board_setup_configured_board(self):
         done = {"auth": {"apiKey": "geheim", "boardId": "abc"}, "cam": {"cams": ["/dev/video0", "/dev/video2", ""]}}
-        result = self._board_setup_with(done)
+        with patch.object(LinuxAutodartsAdapter, "_is_real_camera", side_effect=lambda c: bool(c)):
+            result = self._board_setup_with(done)
         self.assertEqual(result, {"registered": True, "cameras": 2})
         self.assertNotIn("geheim", str(result))  # keine Zugangsdaten weitergeben
+
+    def test_pi_internal_video_devices_are_no_cameras(self):
+        # Autodarts trägt auf dem Pi die ISP-Geräte des Chips als Kameras ein.
+        import tempfile
+        from pathlib import Path as P
+
+        with tempfile.TemporaryDirectory() as tmp:
+            dev, sysfs = P(tmp) / "dev", P(tmp) / "sys"
+            dev.mkdir(); sysfs.mkdir()
+            for node, name in (("video0", "USB Camera"), ("video14", "bcm2835-isp-capture0")):
+                (dev / node).touch()
+                (sysfs / node).mkdir()
+                (sysfs / node / "name").write_text(name + "\n")
+
+            real_path = ad_linux.Path
+
+            def fake_path(p):
+                p = str(p)
+                if p.startswith("/dev/"):
+                    return real_path(dev / p[len("/dev/"):])
+                if p == "/sys/class/video4linux":
+                    return real_path(sysfs)
+                return real_path(p)
+
+            with patch("app.adapters.autodarts.linux.Path", side_effect=fake_path):
+                self.assertTrue(LinuxAutodartsAdapter._is_real_camera("native=/dev/video0"))
+                self.assertFalse(LinuxAutodartsAdapter._is_real_camera("native=/dev/video14"))
+                self.assertFalse(LinuxAutodartsAdapter._is_real_camera("native=/dev/video99"))  # fehlt
+                self.assertFalse(LinuxAutodartsAdapter._is_real_camera(""))
+                self.assertTrue(LinuxAutodartsAdapter._is_real_camera("rtsp://cam.local/stream"))
 
     def test_board_setup_unknown(self):
         self.assertIsNone(self._board_setup_with(OSError("refused")))
