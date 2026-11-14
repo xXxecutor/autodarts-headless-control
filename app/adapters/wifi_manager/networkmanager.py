@@ -229,6 +229,8 @@ class NetworkManagerBackend(WifiManagerAdapter):
             "ifname", interface,
             # Argumente gehen ohne Shell an nmcli: SSID unverändert übergeben.
             "ssid", ssid,
+            # Die Box hängt am Netzteil: Stromsparen nur Latenz und Aussetzer.
+            "wifi.powersave", "2",
         ]
 
         if password:

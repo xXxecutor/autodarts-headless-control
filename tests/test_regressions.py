@@ -47,6 +47,8 @@ class TestNetworkManagerFixes(unittest.TestCase):
         backend.connect("wlan0", "Bob's WLAN", "password123")
         add_args = mock_run.call_args_list[1][0][0]
         self.assertEqual(add_args[add_args.index("ssid") + 1], "Bob's WLAN")
+        # Dauerbetrieb am Netzteil: WLAN-Stromsparen aus (2 = disable)
+        self.assertEqual(add_args[add_args.index("wifi.powersave") + 1], "2")
 
     @patch("app.adapters.wifi_manager.networkmanager.subprocess.run")
     def test_scan_handles_escaped_colons_hidden_and_duplicates(self, mock_run, _which):
