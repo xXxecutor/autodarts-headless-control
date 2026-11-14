@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from app.adapters.autodarts.factory import create_autodarts_adapter
+from app.adapters.terminal.base import DEFAULT_COLS, DEFAULT_ROWS
 from app.adapters.terminal.factory import create_terminal_adapter
 
 
@@ -30,7 +31,7 @@ class TerminalService:
             arguments=["remote", "-H", "localhost"],
         )
 
-    def start_tui(self):
+    def start_tui(self, cols: int = DEFAULT_COLS, rows: int = DEFAULT_ROWS):
         launch_info = self.get_tui_launch_info()
 
         if not launch_info:
@@ -40,6 +41,8 @@ class TerminalService:
             launch_info.executable,
             launch_info.user,
             launch_info.arguments,
+            cols=cols,
+            rows=rows,
         )
 
     def is_autodarts_running(self):
