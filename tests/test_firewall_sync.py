@@ -143,7 +143,7 @@ fi
         # Prüfen, ob State-File geschrieben wurde
         state_file = self.state_dir / "active-state"
         self.assertTrue(state_file.exists())
-        self.assertEqual(state_file.read_text().strip(), "hotspot|wlan0|192.168.4.0/24|v3|80|8092")
+        self.assertEqual(state_file.read_text().strip(), "hotspot|wlan0|192.168.4.0/24|v4|80|8092")
 
         # Prüfen, ob UFW Hotspot-Regeln aufgerufen wurden
         ufw_log = ufw_calls.read_text()
@@ -197,7 +197,7 @@ fi
 
         state_file = self.state_dir / "active-state"
         self.assertTrue(state_file.exists())
-        self.assertEqual(state_file.read_text().strip(), "lan|wlan0|192.168.2.0/24|v3|80|8092")
+        self.assertEqual(state_file.read_text().strip(), "lan|wlan0|192.168.2.0/24|v4|80|8092")
 
         ufw_log = ufw_calls.read_text()
         self.assertIn("Autodarts HTTP LAN", ufw_log)
@@ -208,6 +208,58 @@ fi
         res2 = subprocess.run([str(script_path)], env=env, capture_output=True, text=True)
         self.assertEqual(res2.returncode, 0)
         self.assertFalse(ufw_calls.exists(), "Bei identischem Zustand dürfen keine UFW-Befehle laufen")
+
+    def test_cable_and_wifi_are_both_allowed(self):
+        """Kabel (z. B. per ifupdown) und WLAN gleichzeitig: beide Adressen bleiben erreichbar."""
+        script_path = self._prepare_testable_sync_script()
+        ufw_calls = Path(self.temp_dir.name) / "ufw_calls.log"
+        avahi_conf = Path(self.temp_dir.name) / "default_avahi.conf"
+
+        self._create_mock("nmcli", """
+if [[ "$*" == *"-t -f DEVICE,TYPE,STATE device status"* ]]; then
+    echo "wlan0:wifi:connected"
+    echo "enp1s0:ethernet:unmanaged"
+elif [[ "$*" == *"-g GENERAL.CONNECTION device show wlan0"* ]]; then
+    echo "autodarts-HomeWifi"
+elif [[ "$*" == *"-g GENERAL.TYPE device show wlan0"* ]]; then
+    echo "wifi"
+elif [[ "$*" == *"-g GENERAL.TYPE device show enp1s0"* ]]; then
+    echo "ethernet"
+fi
+""")
+        self._create_mock("ip", """
+if [[ "$*" == *"-o -4 addr show dev wlan0 scope global"* ]]; then
+    echo "3: wlan0    inet 192.168.2.147/24 brd 192.168.2.255 scope global wlan0"
+elif [[ "$*" == *"-o -4 addr show dev enp1s0 scope global"* ]]; then
+    echo "2: enp1s0    inet 192.168.2.130/24 brd 192.168.2.255 scope global enp1s0"
+elif [[ "$*" == *"-4 route show default"* ]]; then
+    echo "default via 192.168.2.1 dev wlan0 proto dhcp src 192.168.2.147 metric 600"
+    echo "default via 192.168.2.1 dev enp1s0 proto dhcp src 192.168.2.130 metric 1002"
+fi
+""")
+        self._create_mock("ufw", f"""
+echo "UFW: $*" >> "{ufw_calls}"
+if [[ "$*" == *"status numbered"* ]]; then
+    echo "[ 1] 22/tcp ALLOW IN Anywhere # SSH"
+fi
+""")
+        self._create_mock("logger", 'echo "LOG: $*" >> "' + str(self.mock_log) + '"')
+        self._create_mock("systemctl", "exit 0")
+
+        env = os.environ.copy()
+        env["PATH"] = f"{self.bin_dir}:{env['PATH']}"
+        res = subprocess.run([str(script_path)], env=env, capture_output=True, text=True)
+        self.assertEqual(res.returncode, 0, f"Fehler: {res.stderr}")
+
+        state = (self.state_dir / "active-state").read_text().strip()
+        self.assertEqual(
+            state,
+            "lan|wlan0|192.168.2.0/24,lan|enp1s0|192.168.2.0/24|v4|80|8092",
+        )
+        ufw_log = ufw_calls.read_text()
+        self.assertIn("allow in on wlan0 from 192.168.2.0/24 to any port 80 proto tcp", ufw_log)
+        self.assertIn("allow in on enp1s0 from 192.168.2.0/24 to any port 80 proto tcp", ufw_log)
+        self.assertIn("allow-interfaces=wlan0,enp1s0", avahi_conf.read_text())
 
     def test_avahi_interface_sync_behavior(self):
         """Prüft, dass Avahi-Konfiguration gesichert, gezielt aktualisiert und nicht blind überschrieben wird."""

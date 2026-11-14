@@ -91,10 +91,9 @@ find_hotspot_interface() {
 }
 
 # Ermittelt das Subnetz einer regulären Ethernet- oder WLAN-Verbindung.
-find_lan() {
-    local device type cidr subnet
+lan_entry() {
+    local device="$1" type cidr subnet
 
-    device="$(ip -4 route show default | awk 'NR == 1 {print $5}')"
     [[ -n "$device" ]] || return 1
 
     type="$(nmcli -g GENERAL.TYPE device show "$device" 2>/dev/null || true)"
@@ -134,6 +133,19 @@ if network.version != 4 or network.prefixlen < 16:
 PY
 
     printf '%s|%s\n' "$device" "$subnet"
+}
+
+# Alle Anschlüsse mit Default-Route (z. B. Kabel und WLAN gleichzeitig),
+# damit die Box über jede ihrer Adressen erreichbar bleibt.
+find_lans() {
+    local device
+    while IFS= read -r device; do
+        lan_entry "$device" || true
+    done < <(
+        ip -4 route show default |
+        awk '{for (i = 1; i < NF; i++) if ($i == "dev") print $(i + 1)}' |
+        awk '!seen[$0]++'
+    )
 }
 
 # Passt allow-interfaces in /etc/avahi/avahi-daemon.conf gezielt an,
@@ -210,26 +222,27 @@ PY
     fi
 }
 
-mode="none"
-interface=""
-subnet=""
-
-if interface="$(find_hotspot_interface)"; then
-    mode="hotspot"
-    subnet="192.168.4.0/24"
+# Freizugebende Zugänge, je Eintrag "modus|gerät|subnetz".
+entries=()
+hotspot_iface=""
+if hotspot_iface="$(find_hotspot_interface)"; then
+    entries+=("hotspot|$hotspot_iface|192.168.4.0/24")
 else
-    lan="$(find_lan || true)"
-    if [[ -n "$lan" ]]; then
-        interface="${lan%%|*}"
-        subnet="${lan#*|}"
-        mode="lan"
-    fi
+    hotspot_iface=""
 fi
+while IFS= read -r lan; do
+    [[ -n "$lan" && "${lan%%|*}" != "$hotspot_iface" ]] && entries+=("lan|$lan")
+done < <(find_lans)
 
 # Regelsatz-Version im Zustand: Ändern sich die Regeln (z. B. neuer Port),
 # werden bestehende Installationen beim nächsten Lauf automatisch aktualisiert.
-RULESET_VERSION="3"
-desired_state="$mode|$interface|$subnet|v$RULESET_VERSION|$HTTP_PORT|$WS_PORT"
+RULESET_VERSION="4"
+if [[ ${#entries[@]} -gt 0 ]]; then
+    entries_state="$(IFS=,; echo "${entries[*]}")"
+else
+    entries_state="none||"
+fi
+desired_state="$entries_state|v$RULESET_VERSION|$HTTP_PORT|$WS_PORT"
 current_state="$(cat "$STATE_FILE" 2>/dev/null || true)"
 
 # Unverändertes Netzwerk: keine unnötigen Regeländerungen.
@@ -238,22 +251,26 @@ if [[ "$desired_state" == "$current_state" ]]; then
 fi
 
 # Alte Autodarts-Regeln und die frühere globale mDNS-Freigabe
-# entfernen, danach nur den aktuell gewünschten Pfad freigeben.
+# entfernen, danach nur die aktuell gewünschten Zugänge freigeben.
 remove_managed_rules
 
-if [[ "$mode" != "none" ]]; then
+avahi_ifaces=()
+for entry in "${entries[@]}"; do
+    IFS='|' read -r mode interface subnet <<<"$entry"
+    label="$([[ $mode == hotspot ]] && echo Hotspot || echo LAN)"
+
     ufw allow in on "$interface" from "$subnet" to any port "$HTTP_PORT" proto tcp \
-        comment "Autodarts HTTP $([[ $mode == hotspot ]] && echo Hotspot || echo LAN)"
+        comment "Autodarts HTTP $label"
 
     ufw allow in on "$interface" from "$subnet" to any port "$WS_PORT" proto tcp \
-        comment "Autodarts WebSocket $([[ $mode == hotspot ]] && echo Hotspot || echo LAN)"
+        comment "Autodarts WebSocket $label"
 
     # Offizieller Autodarts Board-Manager (Weboberfläche ab Autodarts 2.1).
     ufw allow in on "$interface" from "$subnet" to any port 3180 proto tcp \
-        comment "Autodarts Board-Manager $([[ $mode == hotspot ]] && echo Hotspot || echo LAN)"
+        comment "Autodarts Board-Manager $label"
 
     ufw allow in on "$interface" from "$subnet" to any port 5353 proto udp \
-        comment "Autodarts mDNS $([[ $mode == hotspot ]] && echo Hotspot || echo LAN)"
+        comment "Autodarts mDNS $label"
 
     if [[ "$mode" == "hotspot" ]]; then
         ufw allow in on "$interface" to any port 53 \
@@ -262,9 +279,12 @@ if [[ "$mode" != "none" ]]; then
             comment "Autodarts DHCP Hotspot"
     fi
 
-    sync_avahi_interface "$interface"
-
+    avahi_ifaces+=("$interface")
     log "Aktiver Zugang: mode=$mode interface=$interface subnet=$subnet"
+done
+
+if [[ ${#avahi_ifaces[@]} -gt 0 ]]; then
+    sync_avahi_interface "$(IFS=,; echo "${avahi_ifaces[*]}")"
 else
     log "Kein geeignetes aktives LAN oder Autodarts-Hotspot gefunden; Autodarts-Zugriffsregeln entfernt."
 fi
