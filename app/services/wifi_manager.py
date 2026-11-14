@@ -318,21 +318,27 @@ class WifiManagerService:
         if not saved:
             saved = manager.get_active_connections()
 
-        # Collect unique connection names starting with "autodarts-"
+        # Alle WLAN-Profile löschen, nicht nur die von Headless Control: Auf
+        # dem Pi trägt z. B. der Raspberry Pi Imager das WLAN als
+        # "netplan-wlan0-<SSID>" ein. LAN-, VPN- und andere Profile bleiben.
+        def is_wifi_profile(conn) -> bool:
+            return (
+                conn.get("name", "").startswith("autodarts-")
+                or conn.get("type", "") in ("wifi", "802-11-wireless")
+            )
+
         to_delete = set()
         for conn in saved:
-            name = conn.get("name", "")
-            if name.startswith("autodarts-"):
-                to_delete.add(name)
+            if is_wifi_profile(conn):
+                to_delete.add(conn["name"])
 
         # Also inspect active connections in case saved list missed anything
         for conn in manager.get_active_connections():
-            name = conn.get("name", "")
-            if name.startswith("autodarts-"):
-                to_delete.add(name)
+            if is_wifi_profile(conn):
+                to_delete.add(conn["name"])
 
         if not to_delete:
-            return ConnectionResult(True, "No Wi-Fi profiles to delete")
+            return ConnectionResult(True, "Es sind keine WLAN-Zugangsdaten gespeichert.")
 
         names = sorted(to_delete)
 
@@ -355,9 +361,11 @@ class WifiManagerService:
                     logger.exception("Deferred handover crashed")
 
             threading.Thread(target=_bg_handover, daemon=True).start()
+            logger.info("Handover requested: %s", names)
             return ConnectionResult(
                 True,
-                f"Handover ready: deleting {len(names)} Wi-Fi profile(s) ({', '.join(names)})"
+                "WLAN-Zugangsdaten werden gelöscht. Ohne LAN-Kabel startet gleich "
+                "der Setup-Hotspot „Autodarts-Setup“."
             )
 
         deleted = []
@@ -372,15 +380,14 @@ class WifiManagerService:
                     errors.append(f"{name}: {result.message}")
 
         if errors:
+            logger.warning("Handover incomplete: deleted %s, errors: %s", deleted, errors)
             return ConnectionResult(
                 False,
-                f"Partial handover: deleted {len(deleted)}, errors: {'; '.join(errors)}"
+                "Nicht alle WLAN-Zugangsdaten konnten gelöscht werden. "
+                "Details stehen im Protokoll."
             )
 
-        return ConnectionResult(
-            True,
-            f"Handover ready: deleted {len(deleted)} Wi-Fi profiles"
-        )
+        return ConnectionResult(True, "WLAN-Zugangsdaten gelöscht.")
 
     def get_backend_info(self) -> dict[str, Any]:
         """Get info about active backend for debugging."""

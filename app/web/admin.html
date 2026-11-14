@@ -438,7 +438,7 @@
             <div class="card-head">
                 <h2>Gerät übergeben</h2>
                 <p>
-                    Löscht alle hier eingerichteten WLAN-Zugangsdaten (<code>autodarts-*</code>), z. B. vor der Weitergabe an andere. LAN-Verbindungen, Systemnetzwerke und Autodarts-Daten bleiben erhalten.
+                    Löscht alle gespeicherten WLAN-Zugangsdaten, z. B. vor der Weitergabe an andere – auch ein WLAN, das bei der Installation eingetragen wurde. LAN-Verbindungen und Autodarts-Daten bleiben erhalten.
                 </p>
             </div>
             <button type="button" class="btn btn-danger btn-block" id="handoverBtn" onclick="confirmHandover()">
@@ -563,7 +563,7 @@
     <div class="dialog" role="dialog" aria-modal="true">
         <div class="dialog-icon danger"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></div>
         <h2>WLAN-Zugangsdaten löschen?</h2>
-        <p>Alle hier eingerichteten WLANs werden entfernt. LAN und Autodarts-Daten bleiben erhalten. Ohne LAN-Kabel startet danach der Setup-Hotspot.</p>
+        <p>Alle gespeicherten WLANs werden entfernt. LAN und Autodarts-Daten bleiben erhalten. Ohne LAN-Kabel startet danach der Setup-Hotspot.</p>
         <div class="dialog-buttons">
             <button type="button" class="btn btn-ghost" onclick="hideDialog('handoverOverlay')">Abbrechen</button>
             <button type="button" class="btn btn-danger" onclick="hideDialog('handoverOverlay'); doHandover();">Löschen</button>

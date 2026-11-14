@@ -211,6 +211,21 @@ class TestWifiManagerService(unittest.TestCase):
         self.assertTrue(result.success)
         self.mock_manager.delete_connection.assert_called_once_with("autodarts-OldWiFi")
 
+    def test_prepare_handover_deletes_wifi_from_pi_imager(self):
+        # Raspberry Pi Imager: WLAN als netplan-Profil, LAN-Profil muss bleiben.
+        self.mock_manager.get_saved_connections.return_value = [
+            {"name": "netplan-wlan0-Orange Citadel", "type": "802-11-wireless", "device": "wlan0"},
+            {"name": "netplan-eth0", "type": "802-3-ethernet", "device": ""},
+            {"name": "wg0", "type": "wireguard", "device": "wg0"},
+        ]
+        self.mock_manager.get_active_connections.return_value = []
+        self.mock_manager.delete_connection.return_value = MagicMock(success=True, message="Deleted")
+
+        result = self.service.prepare_handover()
+
+        self.assertTrue(result.success)
+        self.mock_manager.delete_connection.assert_called_once_with("netplan-wlan0-Orange Citadel")
+
     @patch("threading.Thread")
     def test_prepare_handover_deferred(self, mock_thread_cls):
         mock_thread = MagicMock()
@@ -222,7 +237,7 @@ class TestWifiManagerService(unittest.TestCase):
         result = self.service.prepare_handover(deferred=True)
 
         self.assertTrue(result.success)
-        self.assertIn("Handover ready", result.message)
+        self.assertIn("werden gelöscht", result.message)
         mock_thread_cls.assert_called_once()
         mock_thread.start.assert_called_once()
 
@@ -237,7 +252,7 @@ class TestWifiManagerService(unittest.TestCase):
         result = self.service.prepare_handover()
 
         self.assertFalse(result.success)
-        self.assertIn("Partial handover", result.message)
+        self.assertIn("Nicht alle", result.message)
 
     def test_get_backend_info(self):
         info = self.service.get_backend_info()
