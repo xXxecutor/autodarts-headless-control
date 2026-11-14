@@ -1,0 +1,35 @@
+#!/bin/sh
+# ifupdown-Hook (/etc/network/if-up.d und if-post-down.d).
+# Debian richtet den LAN-Anschluss oft per ifupdown statt NetworkManager ein.
+# Für solche Anschlüsse sendet NetworkManager keine Dispatcher-Events, daher
+# werden die Firewall-Freigaben hier nachgezogen.
+
+[ "${IFACE:-}" = "lo" ] && exit 0
+[ "${ADDRFAM:-inet}" = "inet" ] || exit 0
+SYNC=/usr/local/sbin/autodarts-firewall-sync
+[ -x "$SYNC" ] || exit 0
+
+logger -t autodarts-dispatcher -p daemon.info \
+    "Verarbeite ifupdown-Event: phase=${PHASE:-unknown} interface=${IFACE:-unknown}" 2>/dev/null || true
+
+if [ "${PHASE:-}" = "post-down" ]; then
+    "$SYNC" >/dev/null 2>&1 || true
+    exit 0
+fi
+
+# DHCP-Clients wie dhcpcd laufen im Hintergrund weiter: ifup ist fertig,
+# bevor die Adresse da ist, und dhcpcd setzt zwischendurch eine
+# Notadresse (169.254.x.x) samt Default-Route ohne Router. Daher im
+# Hintergrund bis zu 90 s auf eine Default-Route über einen Router warten,
+# ohne den Systemstart aufzuhalten.
+(
+    i=0
+    while [ "$i" -lt 45 ]; do
+        ip -4 route show default dev "$IFACE" 2>/dev/null | grep -q " via " && break
+        i=$((i + 1))
+        sleep 2
+    done
+    "$SYNC" || true
+) </dev/null >/dev/null 2>&1 &
+
+exit 0

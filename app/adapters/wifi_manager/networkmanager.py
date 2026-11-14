@@ -85,12 +85,47 @@ class NetworkManagerBackend(WifiManagerAdapter):
         """True if a regular (non-hotspot) Ethernet or Wi-Fi connection is up."""
         if active is None:
             active = self.get_active_connections()
-        return any(
+        if any(
             c.get("state") == "activated"
             and c.get("type") in UPLINK_TYPES
             and not c.get("name", "").startswith(HOTSPOT_PREFIX)
             for c in active
-        )
+        ):
+            return True
+        return self._has_unmanaged_uplink()
+
+    def _has_unmanaged_uplink(self) -> bool:
+        """Default route over an interface NetworkManager does not manage.
+
+        Debian configures the LAN port via ifupdown (/etc/network/interfaces);
+        NetworkManager then lists it as "unmanaged" and never reports an
+        active connection for it, although the box is online.
+        """
+        res = self._run(["-t", "-f", "DEVICE,TYPE,STATE", "device", "status"])
+        if res.returncode != 0 or not isinstance(res.stdout, str):
+            return False
+        unmanaged = set()
+        for line in res.stdout.splitlines():
+            fields = self._split_terse(line)
+            if len(fields) >= 3 and fields[1] in UPLINK_TYPES and fields[2].startswith("unmanaged"):
+                unmanaged.add(fields[0])
+        return bool(unmanaged & self._default_route_devices())
+
+    @staticmethod
+    def _default_route_devices() -> set[str]:
+        """Interfaces carrying an IPv4 default route (from /proc/net/route)."""
+        devices = set()
+        try:
+            with open("/proc/net/route", encoding="ascii") as fh:
+                next(fh, None)  # Kopfzeile
+                for line in fh:
+                    parts = line.split()
+                    # Iface Destination Gateway Flags ...; Flag 0x1 = RTF_UP
+                    if len(parts) >= 4 and parts[1] == "00000000" and int(parts[3], 16) & 0x1:
+                        devices.add(parts[0])
+        except (OSError, ValueError):
+            pass
+        return devices
 
     def connect_known(self, interface: str) -> bool:
         """Let NetworkManager pick and activate the best saved profile."""

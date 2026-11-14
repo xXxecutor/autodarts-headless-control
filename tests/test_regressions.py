@@ -82,6 +82,23 @@ class TestNetworkManagerFixes(unittest.TestCase):
             {"name": "autodarts-hotspot-Autodarts-Setup", "type": "802-11-wireless", "device": "wlan0", "state": "activated"},
         ]))
 
+    @patch("app.adapters.wifi_manager.networkmanager.subprocess.run")
+    def test_has_uplink_accepts_lan_managed_by_ifupdown(self, mock_run, _which):
+        # Debian: enp1s0 per /etc/network/interfaces -> für NetworkManager "unmanaged".
+        mock_run.return_value = subprocess.CompletedProcess(
+            [], 0,
+            stdout="enp1s0:ethernet:unmanaged\nwlp2s0:wifi:disconnected\nlo:loopback:connected (externally)\n",
+            stderr="",
+        )
+        backend = NetworkManagerBackend()
+        with patch.object(NetworkManagerBackend, "_default_route_devices", return_value={"enp1s0"}):
+            self.assertTrue(backend.has_uplink([]))
+        with patch.object(NetworkManagerBackend, "_default_route_devices", return_value=set()):
+            self.assertFalse(backend.has_uplink([]))
+        # Ein nicht verwalteter WLAN-Hotspot o. Ä. ohne Default-Route zählt nicht.
+        with patch.object(NetworkManagerBackend, "_default_route_devices", return_value={"wg0"}):
+            self.assertFalse(backend.has_uplink([]))
+
     @patch("app.adapters.wifi_manager.networkmanager.time.sleep")
     @patch("app.adapters.wifi_manager.networkmanager.threading.Thread", ImmediateThread)
     @patch("app.adapters.wifi_manager.networkmanager.subprocess.run")

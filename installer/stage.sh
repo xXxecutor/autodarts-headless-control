@@ -18,7 +18,7 @@ stage_files() {
     mkdir -p "${app_dir}/installer" \
         "${root}/etc/avahi/services" \
         "${root}/etc/NetworkManager/dispatcher.d" \
-        "${root}/etc/NetworkManager/dnsmasq-shared.d" \
+        "${root}/etc/NetworkManager/dnsmasq-shared.d"         "${root}/etc/network/if-up.d"         "${root}/etc/network/if-post-down.d" \
         "${root}/etc/polkit-1/rules.d" \
         "${root}/etc/polkit-1/localauthority/50-local.d" \
         "${root}/etc/sudoers.d" \
@@ -42,6 +42,8 @@ stage_files() {
     install -m 0440 "${project}/packaging/sudoers/headless-control"              "${root}/etc/sudoers.d/headless-control"
     install -m 0644 "${project}/packaging/systemd/"*.service "${project}/packaging/systemd/"*.timer "${root}/${unit_dir}/"
     install -m 0750 "${project}/installer/90-autodarts-firewall"                 "${root}/etc/NetworkManager/dispatcher.d/90-autodarts-firewall"
+    install -m 0755 "${project}/installer/ifupdown-autodarts-firewall"          "${root}/etc/network/if-up.d/autodarts-firewall"
+    install -m 0755 "${project}/installer/ifupdown-autodarts-firewall"          "${root}/etc/network/if-post-down.d/autodarts-firewall"
     install -m 0644 "${project}/installer/dnsmasq-shared-autodarts.conf"         "${root}/etc/NetworkManager/dnsmasq-shared.d/autodarts.conf"
     install -m 0750 "${project}/installer/autodarts-firewall-sync"               "${root}/usr/local/sbin/autodarts-firewall-sync"
 

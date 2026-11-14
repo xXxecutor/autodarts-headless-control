@@ -10,9 +10,11 @@ log() {
     logger -t autodarts-firewall-sync -- "$*"
 }
 
-# Verhindert parallele Ausführungen durch mehrere NetworkManager-Events.
+# Serialisiert parallele Aufrufe (NetworkManager-Dispatcher, ifupdown-Hook).
+# Nicht abbrechen, sondern warten: Ein früher Lauf kann das Netz noch ohne
+# Adresse gesehen haben, erst der spätere sieht den fertigen Zustand.
 exec 9>"$LOCK_FILE"
-flock -n 9 || exit 0
+flock -w 60 9 || exit 0
 
 [[ $EUID -eq 0 ]] || exit 1
 # Ohne ufw (z. B. firewalld auf Fedora/openSUSE) gibt es nichts zu synchronisieren.
@@ -96,6 +98,15 @@ find_lan() {
     [[ -n "$device" ]] || return 1
 
     type="$(nmcli -g GENERAL.TYPE device show "$device" 2>/dev/null || true)"
+    # Ohne Antwort von NetworkManager (z. B. beim Booten per ifupdown,
+    # bevor NetworkManager läuft): Art des Anschlusses aus sysfs ableiten.
+    if [[ -z "$type" && -e "/sys/class/net/$device/device" ]]; then
+        if [[ -d "/sys/class/net/$device/wireless" ]]; then
+            type="wifi"
+        else
+            type="ethernet"
+        fi
+    fi
     case "$type" in
         ethernet|wifi) ;;
         *) return 1 ;;
