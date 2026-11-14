@@ -133,7 +133,9 @@
     gap: 12px;
 }
 
-/* Board-Status */
+/* Board-Status (als Leiste über den Karten) */
+.state-bar { padding: 14px 18px; }
+
 .state {
     display: flex;
     align-items: center;
@@ -418,6 +420,7 @@
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
     <defs>
         <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><circle cx="12" cy="12" r="5.5"/><circle cx="12" cy="12" r="1.5"/></symbol>
+        <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
         <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
         <symbol id="i-external" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3"/></symbol>
         <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
@@ -480,6 +483,18 @@
         <span class="banner-cta">WLAN einrichten →</span>
     </button>
 
+    <!-- Board-Status: eigene Leiste über den Karten (in der Board-Karte stehen die drei Aktionen) -->
+    <div class="state state-bar" id="boardStatus" role="status">
+        <div class="state-badge">
+            <svg class="icon" aria-hidden="true"><use href="#i-target"/></svg>
+            <span class="state-dot"></span>
+        </div>
+        <div>
+            <p class="state-title" id="boardStatusTitle">Status wird geladen …</p>
+            <p class="state-text" id="boardStatusText">Einen Moment bitte.</p>
+        </div>
+    </div>
+
     <main class="layout">
 
     <!-- Board: Status und Hauptaktionen -->
@@ -489,19 +504,14 @@
             <p>Spielen und das Board einrichten.</p>
         </div>
         <div class="rows">
-            <div class="state" id="boardStatus" role="status">
-                <div class="state-badge">
-                    <svg class="icon" aria-hidden="true"><use href="#i-target"/></svg>
-                    <span class="state-dot"></span>
-                </div>
-                <div>
-                    <p class="state-title" id="boardStatusTitle">Status wird geladen …</p>
-                    <p class="state-text" id="boardStatusText">Einen Moment bitte.</p>
-                </div>
-            </div>
             <a class="btn btn-primary action" href="https://play.autodarts.com" target="_blank" rel="noopener">
                 <svg class="icon" aria-hidden="true"><use href="#i-target"/></svg>
                 <span class="action-text">Jetzt spielen<span>play.autodarts.com</span></span>
+                <svg class="icon trail" aria-hidden="true"><use href="#i-external"/></svg>
+            </a>
+            <a class="btn btn-secondary action" href="https://autodarts-spiele.vercel.app/" target="_blank" rel="noopener">
+                <svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg>
+                <span class="action-text">Mini-Spiele<span>Memory, Tic Tac Toe, Killer &amp; Co.</span></span>
                 <svg class="icon trail" aria-hidden="true"><use href="#i-external"/></svg>
             </a>
             <button type="button" class="btn btn-secondary action" id="boardManagerBtn" onclick="openBoardManager()" disabled>
@@ -520,8 +530,8 @@
         </div>
         <ol class="steps rows">
             <li><strong>Board-Manager öffnen</strong>Über „Board einrichten“ – öffnet sich in einem neuen Tab.</li>
-            <li><strong>Anmelden &amp; kalibrieren</strong>Board mit deinem Autodarts-Konto verbinden, Kameras zuordnen.</li>
-            <li><strong>Loslegen</strong>„Jetzt spielen“ antippen und auf play.autodarts.com ein Spiel starten.</li>
+            <li><strong>Anmelden &amp; kalibrieren</strong>Board mit deinem Autodarts-Konto verbinden, Kameras zuordnen und konfigurieren.</li>
+            <li><strong>Loslegen</strong>„Jetzt spielen“ für Matches auf play.autodarts.com – oder „Mini-Spiele“ für Memory, Tic Tac Toe &amp; Co. mit deinem Board.</li>
         </ol>
     </section>
 
