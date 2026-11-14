@@ -116,6 +116,35 @@ class TestAutodartsAutostart(unittest.TestCase):
         with patch("app.adapters.autodarts.linux.socket.create_connection", side_effect=OSError):
             self.assertFalse(self.adapter.board_manager_reachable())
 
+    def _board_setup_with(self, payload):
+        import io
+        import json as _json
+
+        class FakeOpener:
+            def open(self, url, timeout):
+                if isinstance(payload, Exception):
+                    raise payload
+                return io.BytesIO(_json.dumps(payload).encode() if not isinstance(payload, bytes) else payload)
+
+        with patch("app.adapters.autodarts.linux.urllib.request.build_opener", return_value=FakeOpener()):
+            return self.adapter.board_setup()
+
+    def test_board_setup_fresh_board(self):
+        # Antwort eines frisch installierten Boards (Board-Manager 2.1)
+        fresh = {"auth": {"apiKey": "", "boardId": ""}, "cam": {"cams": ["", "", ""]}}
+        self.assertEqual(self._board_setup_with(fresh), {"registered": False, "cameras": 0})
+
+    def test_board_setup_configured_board(self):
+        done = {"auth": {"apiKey": "geheim", "boardId": "abc"}, "cam": {"cams": ["/dev/video0", "/dev/video2", ""]}}
+        result = self._board_setup_with(done)
+        self.assertEqual(result, {"registered": True, "cameras": 2})
+        self.assertNotIn("geheim", str(result))  # keine Zugangsdaten weitergeben
+
+    def test_board_setup_unknown(self):
+        self.assertIsNone(self._board_setup_with(OSError("refused")))
+        self.assertIsNone(self._board_setup_with(b"<html>"))
+        self.assertIsNone(self._board_setup_with(["unexpected"]))
+
 
 if __name__ == "__main__":
     unittest.main()

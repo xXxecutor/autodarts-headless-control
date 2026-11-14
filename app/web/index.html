@@ -1090,8 +1090,26 @@ async function loadAutodartsStatus() {
     bmButton.disabled = !status.board_manager_reachable;
     bmButton.title = status.board_manager_reachable ? '' : 'Der Board-Manager ist noch nicht erreichbar.';
 
+    // Einrichtungsstand aus dem Board-Manager (null = unbekannt)
+    const setup = status.board_setup || null;
+    let ready = false;
+
     if (status.board_manager_reachable) {
-        setBoardStatus('ok', 'Bereit zum Spielen', 'Autodarts läuft und der Board-Manager ist erreichbar.');
+        if (setup && !setup.registered) {
+            setBoardStatus('wait', 'Board noch nicht eingerichtet',
+                'Über „Board einrichten“ mit deinem Autodarts-Konto verbinden.');
+        } else if (setup && setup.cameras === 0) {
+            setBoardStatus('wait', 'Keine Kamera zugeordnet',
+                'Über „Board einrichten“ zuordnen und kalibrieren.');
+        } else if (setup) {
+            ready = true;
+            setBoardStatus('ok', 'Bereit zum Spielen',
+                `Board verbunden, ${setup.cameras} ${setup.cameras === 1 ? 'Kamera' : 'Kameras'} zugeordnet.`);
+        } else {
+            ready = true;
+            setBoardStatus('ok', 'Bereit zum Spielen',
+                'Noch nicht eingerichtet? Über „Board einrichten“.');
+        }
         tuiFallback.style.display = 'none';
     } else if (status.running) {
         // Board läuft, aber ohne Weboberfläche (z. B. Autodarts 2.0): Terminal als Fallback.
@@ -1107,7 +1125,8 @@ async function loadAutodartsStatus() {
 
     autostartFix.style.display = serviceOk ? 'none' : 'flex';
     refreshNotes();
-    scheduleBoardStatus(status.board_manager_reachable ? 30000 : 5000);
+    // Während der Einrichtung öfter nachsehen, damit die Kachel zeitnah umspringt.
+    scheduleBoardStatus(ready ? 30000 : status.board_manager_reachable ? 10000 : 5000);
 }
 
 async function setupAutostart() {

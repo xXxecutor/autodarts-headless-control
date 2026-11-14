@@ -1,4 +1,6 @@
+import json
 import os
+import urllib.request
 try:
     import pwd
 except ImportError:
@@ -70,6 +72,7 @@ class LinuxAutodartsAdapter(AutodartsAdapter):
     def status(self) -> dict:
         path = self._find_path()
         installed = path is not None
+        reachable = self.board_manager_reachable() if installed else False
         return {
             "installed": installed,
             "running": self.is_running() if installed else False,
@@ -78,7 +81,8 @@ class LinuxAutodartsAdapter(AutodartsAdapter):
             "terminal_user": self.terminal_user() if installed else None,
             "service": self.service_state() if installed else None,
             "board_manager_port": BOARD_MANAGER_PORT,
-            "board_manager_reachable": self.board_manager_reachable() if installed else False,
+            "board_manager_reachable": reachable,
+            "board_setup": self.board_setup() if reachable else None,
         }
 
     # ------------------------------------------------------------------
@@ -243,6 +247,29 @@ class LinuxAutodartsAdapter(AutodartsAdapter):
                 return True
         except OSError:
             return False
+
+    def board_setup(self, timeout: float = 1.5) -> dict | None:
+        """Setup state from the Board Manager, without any credentials.
+
+        Returns {"registered": bool, "cameras": int} or None if unknown
+        (Board Manager not reachable or unexpected answer).
+        """
+        # Kein Proxy aus der Umgebung: Ziel ist immer der lokale Board-Manager.
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        try:
+            with opener.open(f"http://127.0.0.1:{BOARD_MANAGER_PORT}/api/config", timeout=timeout) as resp:
+                config = json.loads(resp.read(256 * 1024).decode("utf-8"))
+        except (OSError, ValueError):
+            return None
+        if not isinstance(config, dict):
+            return None
+        auth = config.get("auth") if isinstance(config.get("auth"), dict) else {}
+        cam = config.get("cam") if isinstance(config.get("cam"), dict) else {}
+        cams = cam.get("cams") if isinstance(cam.get("cams"), list) else []
+        return {
+            "registered": bool(auth.get("boardId")),
+            "cameras": sum(1 for c in cams if isinstance(c, str) and c.strip()),
+        }
 
     def start(self) -> bool:
         if not self._find_path():
