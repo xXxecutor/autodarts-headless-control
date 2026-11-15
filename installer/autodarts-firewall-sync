@@ -28,6 +28,14 @@ read_port() {
     value="$(grep -E "^[[:space:]]*$1[[:space:]]*=" "$ENV_FILE" 2>/dev/null | tail -n1 | tr -cd '0-9')"
     printf '%s\n' "${value:-$2}"
 }
+UFW_DEFAULTS="/etc/default/ufw"
+
+# Filtert ufw auch IPv6? Nur dann braucht es IPv6-Freigaben
+# (mit IPV6=no lässt ufw IPv6 unangetastet).
+ufw_ipv6() {
+    grep -qiE '^[[:space:]]*IPV6[[:space:]]*=[[:space:]]*"?yes' "$UFW_DEFAULTS" 2>/dev/null
+}
+
 HTTP_PORT="$(read_port HEADLESS_HTTP_PORT 80)"
 WS_PORT="$(read_port HEADLESS_WS_PORT 8092)"
 
@@ -135,6 +143,37 @@ PY
     printf '%s|%s\n' "$device" "$subnet"
 }
 
+# IPv6-Netze eines Anschlusses: die direkt erreichbaren Präfixe aus den
+# Routen (vom Router per Router Advertisement verteilt, ändern sich beim
+# Anbieter oft täglich) plus Link-Local. Ohne diese Freigaben liefen Geräte,
+# die IPv6 bevorzugen, zuerst in die Sperre.
+lan6_prefixes() {
+    local device="$1"
+
+    ip -6 route show dev "$device" 2>/dev/null |
+    awk '$1 ~ /\// && $0 !~ / via / {print $1}' |
+    python3 -c '
+import ipaddress
+import sys
+
+seen = set()
+for line in sys.stdin:
+    try:
+        net = ipaddress.ip_network(line.strip(), strict=False)
+    except ValueError:
+        continue
+    # Nur übliche LAN-Präfixe (/48 bis /64), kein Link-Local/Multicast
+    if net.version != 6 or not 48 <= net.prefixlen <= 64:
+        continue
+    if net.is_link_local or net.is_multicast:
+        continue
+    seen.add(net)
+for net in sorted(seen):
+    print(net)
+'
+    printf 'fe80::/10\n'
+}
+
 # Alle Anschlüsse mit Default-Route (z. B. Kabel und WLAN gleichzeitig),
 # damit die Box über jede ihrer Adressen erreichbar bleibt.
 find_lans() {
@@ -151,10 +190,10 @@ find_lans() {
 # Passt /etc/avahi/avahi-daemon.conf gezielt an, sichert vor der ersten
 # Änderung das Original und vermeidet blindes Überschreiben:
 # - allow-interfaces: nur die aktuell freigegebenen Anschlüsse
-# - keine IPv6-Adressen veröffentlichen: Die Firewall gibt die Weboberfläche
-#   nur für das IPv4-Netz frei (IPv6-Präfixe wechseln beim Anbieter ständig).
-#   Würde autodarts.local auch eine IPv6-Adresse melden, liefen Geräte, die
-#   IPv6 bevorzugen, zuerst in die Sperre und wichen erst verzögert auf IPv4 aus.
+# - IPv6-Adressen veröffentlichen (Standard von Avahi; v1.0.7 hatte das
+#   abgeschaltet): Windows wartet sonst bei jeder Namensauflösung rund
+#   drei Sekunden vergeblich auf eine IPv6-Antwort, und Seiten laden
+#   verzögert oder gar nicht. Die Firewall gibt dafür das IPv6-Heimnetz frei.
 sync_avahi_interface() {
     local target_iface="$1"
     local conf="/etc/avahi/avahi-daemon.conf"
@@ -177,8 +216,8 @@ target_iface = sys.argv[2]
 
 # Gewünschte Werte je Abschnitt
 desired = {
-    "server": {"allow-interfaces": target_iface, "use-ipv6": "no"},
-    "publish": {"publish-aaaa-on-ipv4": "no"},
+    "server": {"allow-interfaces": target_iface, "use-ipv6": "yes"},
+    "publish": {"publish-aaaa-on-ipv4": "yes"},
 }
 
 with open(conf_path, "r", encoding="utf-8") as f:
@@ -241,7 +280,7 @@ if new_lines != lines:
 sys.exit(0)
 PY
     if [[ $ret -eq 10 ]]; then
-        log "Avahi-Konfiguration aktualisiert: allow-interfaces=$target_iface, nur IPv4"
+        log "Avahi-Konfiguration aktualisiert: allow-interfaces=$target_iface, IPv4 und IPv6"
         if command -v systemctl >/dev/null 2>&1; then
             systemctl try-restart avahi-daemon >/dev/null 2>&1 || true
         fi
@@ -257,13 +296,21 @@ else
     hotspot_iface=""
 fi
 while IFS= read -r lan; do
-    [[ -n "$lan" && "${lan%%|*}" != "$hotspot_iface" ]] && entries+=("lan|$lan")
+    [[ -n "$lan" && "${lan%%|*}" != "$hotspot_iface" ]] || continue
+    entries+=("lan|$lan")
+    # IPv6 desselben Anschlusses (die Präfixe stehen im Zustand, ein
+    # Präfixwechsel führt so beim nächsten Lauf zu neuen Regeln)
+    if ufw_ipv6; then
+        while IFS= read -r prefix; do
+            [[ -n "$prefix" ]] && entries+=("lan|${lan%%|*}|$prefix")
+        done < <(lan6_prefixes "${lan%%|*}")
+    fi
 done < <(find_lans)
 
 # Regelsatz-Version im Zustand: Ändern sich die Regeln oder die Avahi-
-# Einstellungen (z. B. neuer Port, v5: nur IPv4 veröffentlichen), werden
+# Einstellungen (z. B. neuer Port, v6: IPv6-Heimnetz freigeben), werden
 # bestehende Installationen beim nächsten Lauf automatisch aktualisiert.
-RULESET_VERSION="5"
+RULESET_VERSION="6"
 if [[ ${#entries[@]} -gt 0 ]]; then
     entries_state="$(IFS=,; echo "${entries[*]}")"
 else
@@ -306,7 +353,7 @@ for entry in "${entries[@]}"; do
             comment "Autodarts DHCP Hotspot"
     fi
 
-    avahi_ifaces+=("$interface")
+    [[ " ${avahi_ifaces[*]} " == *" $interface "* ]] || avahi_ifaces+=("$interface")
     log "Aktiver Zugang: mode=$mode interface=$interface subnet=$subnet"
 done
 

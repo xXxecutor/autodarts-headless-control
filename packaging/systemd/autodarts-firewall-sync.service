@@ -1,0 +1,6 @@
+[Unit]
+Description=Autodarts firewall rules for the current network
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/autodarts-firewall-sync

@@ -229,7 +229,7 @@ jobs:
           echo "PORT=${PORT:-80}" >> "$GITHUB_ENV"
           for i in $(seq 1 30); do curl -fs "http://127.0.0.1:${PORT:-80}/health" && break; sleep 1; done
           curl -fsS "http://127.0.0.1:${PORT:-80}/health"
-          systemctl is-enabled autodarts-update.timer autodarts-headless-control-update.timer
+          systemctl is-enabled autodarts-update.timer autodarts-headless-control-update.timer autodarts-firewall-sync.timer
 
       - name: polkit erlaubt dem Dienstbenutzer die WLAN-Verwaltung
         run: |

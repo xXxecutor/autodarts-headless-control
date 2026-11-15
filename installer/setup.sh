@@ -16,7 +16,7 @@ APP_USER="autodarts"
 APP_HOME="/var/lib/autodarts-headless-control"
 INSTALL_DIR="/opt/autodarts-headless-control"
 ENV_FILE="/etc/autodarts-headless-control.env"
-UNITS="autodarts-headless-control.service autodarts-update.service autodarts-update.timer autodarts-headless-control-update.service autodarts-headless-control-update.timer"
+UNITS="autodarts-headless-control.service autodarts-update.service autodarts-update.timer autodarts-headless-control-update.service autodarts-headless-control-update.timer autodarts-firewall-sync.service autodarts-firewall-sync.timer"
 
 log() { echo "[autodarts-headless-control] $*"; }
 systemd_running() { [ -d /run/systemd/system ]; }
@@ -233,11 +233,12 @@ configure() {
         systemctl enable autodarts-headless-control.service >/dev/null 2>&1 || true
         systemctl enable --now autodarts-update.timer >/dev/null 2>&1 || true
         systemctl enable --now autodarts-headless-control-update.timer >/dev/null 2>&1 || true
+        systemctl enable --now autodarts-firewall-sync.timer >/dev/null 2>&1 || true
         systemctl restart autodarts-headless-control.service || true
     else
         # z. B. Container/chroot: nur für den nächsten Boot aktivieren.
         systemctl enable autodarts-headless-control.service autodarts-update.timer \
-            autodarts-headless-control-update.timer avahi-daemon.service >/dev/null 2>&1 || true
+            autodarts-headless-control-update.timer autodarts-firewall-sync.timer \n            avahi-daemon.service >/dev/null 2>&1 || true
     fi
 
     local port url="http://autodarts.local"

@@ -1,0 +1,12 @@
+[Unit]
+Description=Re-check Autodarts firewall rules (e.g. new IPv6 prefix from the router)
+
+# Netzwerkwechsel melden NetworkManager und ifupdown sofort. Ein neues
+# IPv6-Präfix vom Router (beim Anbieter oft täglich) meldet niemand; der
+# Abgleich ist billig und ändert nur etwas, wenn sich das Netz geändert hat.
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target

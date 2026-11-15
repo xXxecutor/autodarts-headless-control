@@ -8,6 +8,7 @@ case "$1" in
         systemctl disable --now autodarts-headless-control.service 2>/dev/null || true
         systemctl disable --now autodarts-update.timer 2>/dev/null || true
         systemctl disable --now autodarts-headless-control-update.timer 2>/dev/null || true
+        systemctl disable --now autodarts-firewall-sync.timer 2>/dev/null || true
         ;;
     upgrade|failed-upgrade)
         systemctl stop autodarts-headless-control.service 2>/dev/null || true

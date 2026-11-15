@@ -78,6 +78,9 @@ class TestFirewallSyncScript(unittest.TestCase):
         if not dummy_avahi.exists():
             dummy_avahi.write_text("[server]\n#allow-interfaces=\n")
         dummy_orig = Path(self.temp_dir.name) / "default_avahi.conf.orig"
+        ufw_defaults = Path(self.temp_dir.name) / "ufw_defaults"
+        if not ufw_defaults.exists():
+            ufw_defaults.write_text("IPV6=no\n")
 
         raw = self.sync_script.read_text()
         # Pfade und EUID-Check für isolierte Testumgebung patchen
@@ -93,6 +96,9 @@ class TestFirewallSyncScript(unittest.TestCase):
         ).replace(
             'orig="/etc/avahi/avahi-daemon.conf.orig"',
             f'orig="{dummy_orig}"',
+        ).replace(
+            'UFW_DEFAULTS="/etc/default/ufw"',
+            f'UFW_DEFAULTS="{ufw_defaults}"',
         ).replace(
             '[[ $EUID -eq 0 ]] || exit 1',
             '# [[ $EUID -eq 0 ]] || exit 1',
@@ -143,7 +149,7 @@ fi
         # Prüfen, ob State-File geschrieben wurde
         state_file = self.state_dir / "active-state"
         self.assertTrue(state_file.exists())
-        self.assertEqual(state_file.read_text().strip(), "hotspot|wlan0|192.168.4.0/24|v5|80|8092")
+        self.assertEqual(state_file.read_text().strip(), "hotspot|wlan0|192.168.4.0/24|v6|80|8092")
 
         # Prüfen, ob UFW Hotspot-Regeln aufgerufen wurden
         ufw_log = ufw_calls.read_text()
@@ -197,7 +203,7 @@ fi
 
         state_file = self.state_dir / "active-state"
         self.assertTrue(state_file.exists())
-        self.assertEqual(state_file.read_text().strip(), "lan|wlan0|192.168.2.0/24|v5|80|8092")
+        self.assertEqual(state_file.read_text().strip(), "lan|wlan0|192.168.2.0/24|v6|80|8092")
 
         ufw_log = ufw_calls.read_text()
         self.assertIn("Autodarts HTTP LAN", ufw_log)
@@ -254,7 +260,7 @@ fi
         state = (self.state_dir / "active-state").read_text().strip()
         self.assertEqual(
             state,
-            "lan|wlan0|192.168.2.0/24,lan|enp1s0|192.168.2.0/24|v5|80|8092",
+            "lan|wlan0|192.168.2.0/24,lan|enp1s0|192.168.2.0/24|v6|80|8092",
         )
         ufw_log = ufw_calls.read_text()
         self.assertIn("allow in on wlan0 from 192.168.2.0/24 to any port 80 proto tcp", ufw_log)
@@ -319,14 +325,14 @@ fi
         self.assertIn("publish-workstation=yes", updated)
         self.assertIn("use-ipv4=yes", updated)
         self.assertIn("ratelimit-interval-usec=1000000", updated)
-        # Keine IPv6-Adressen veröffentlichen (Firewall gibt nur IPv4 frei)
-        self.assertIn("use-ipv6=no", updated)
-        self.assertNotIn("use-ipv6=yes", updated)
-        self.assertIn("publish-aaaa-on-ipv4=no", updated)
+        # IPv6-Adressen veröffentlichen (Windows wartet sonst auf eine IPv6-Antwort)
+        self.assertIn("use-ipv6=yes", updated)
+        self.assertNotIn("use-ipv6=no", updated)
+        self.assertIn("publish-aaaa-on-ipv4=yes", updated)
         # Werte stehen im richtigen Abschnitt
         server, publish = updated.split("[publish]")
-        self.assertIn("use-ipv6=no", server)
-        self.assertIn("publish-aaaa-on-ipv4=no", publish)
+        self.assertIn("use-ipv6=yes", server)
+        self.assertIn("publish-aaaa-on-ipv4=yes", publish)
 
         # 2. Erneut ausführen (Zustand löschen): keine weitere Änderung
         state_file = Path(self.state_dir) / "active-state"
@@ -337,10 +343,10 @@ fi
         self.assertEqual(avahi_conf.read_text(), updated)
 
     def test_avahi_missing_sections_are_added(self):
-        """Fehlt der [publish]-Abschnitt, wird er mit der IPv4-Einstellung ergänzt."""
+        """Fehlt der [publish]-Abschnitt, wird er ergänzt; die Abschaltung aus v1.0.7 wird zurückgenommen."""
         script_path = self._prepare_testable_sync_script()
         avahi_conf = Path(self.temp_dir.name) / "default_avahi.conf"
-        avahi_conf.write_text("[server]\nuse-ipv6=yes\n#use-ipv6=yes")
+        avahi_conf.write_text("[server]\nuse-ipv6=no\n#use-ipv6=yes")
 
         self._create_mock("nmcli", """
 if [[ "$*" == *"-t -f DEVICE,TYPE,STATE device status"* ]]; then
@@ -368,9 +374,122 @@ fi
 
         self.assertEqual(
             avahi_conf.read_text(),
-            "[server]\nuse-ipv6=no\n#use-ipv6=yes\nallow-interfaces=wlan0\n"
-            "\n[publish]\npublish-aaaa-on-ipv4=no\n",
+            "[server]\nuse-ipv6=yes\n#use-ipv6=yes\nallow-interfaces=wlan0\n"
+            "\n[publish]\npublish-aaaa-on-ipv4=yes\n",
         )
+
+    def _ipv6_lan_mocks(self, prefix_file: Path, ufw_calls: Path):
+        """WLAN mit IPv4 und IPv6; die IPv6-Routen kommen aus prefix_file."""
+        self._create_mock("nmcli", """
+if [[ "$*" == *"-t -f DEVICE,TYPE,STATE device status"* ]]; then
+    echo "wlan0:wifi:connected"
+elif [[ "$*" == *"-g GENERAL.CONNECTION device show wlan0"* ]]; then
+    echo "autodarts-HomeWifi"
+elif [[ "$*" == *"-g GENERAL.TYPE device show wlan0"* ]]; then
+    echo "wifi"
+fi
+""")
+        self._create_mock("ip", f"""
+if [[ "$*" == *"-o -4 addr show dev wlan0 scope global"* ]]; then
+    echo "3: wlan0    inet 192.168.2.131/24 brd 192.168.2.255 scope global wlan0"
+elif [[ "$*" == *"-4 route show default"* ]]; then
+    echo "default via 192.168.2.1 dev wlan0 proto dhcp src 192.168.2.131 metric 600"
+elif [[ "$*" == *"-6 route show dev wlan0"* ]]; then
+    cat "{prefix_file}"
+fi
+""")
+        self._create_mock("ufw", f"""
+echo "UFW: $*" >> "{ufw_calls}"
+if [[ "$*" == *"status numbered"* ]]; then
+    echo "[ 1] 22/tcp ALLOW IN Anywhere # SSH"
+fi
+""")
+        self._create_mock("logger", 'echo "LOG: $*" >> "' + str(self.mock_log) + '"')
+        self._create_mock("systemctl", "exit 0")
+
+    def test_ipv6_home_network_is_allowed(self):
+        """Filtert ufw IPv6, werden die Präfixe des Heimnetzes und Link-Local freigegeben."""
+        script_path = self._prepare_testable_sync_script()
+        (Path(self.temp_dir.name) / "ufw_defaults").write_text("IPV6=yes\n")
+        ufw_calls = Path(self.temp_dir.name) / "ufw_calls.log"
+        prefix_file = Path(self.temp_dir.name) / "routes6"
+        prefix_file.write_text(
+            "2003:df:df42:c870::/64 proto ra metric 600 pref medium\n"
+            "fd00:1234::/64 proto ra metric 600 pref medium\n"
+            "fe80::/64 proto kernel metric 1024 pref medium\n"
+            "2003:df::/32 via fe80::1 proto ra metric 600\n"
+            "2003:df:df42:c870::42 proto kernel metric 600\n"
+            "default via fe80::1 proto ra metric 600 pref medium\n"
+        )
+        self._ipv6_lan_mocks(prefix_file, ufw_calls)
+
+        env = os.environ.copy()
+        env["PATH"] = f"{self.bin_dir}:{env['PATH']}"
+        res = subprocess.run([str(script_path)], env=env, capture_output=True, text=True)
+        self.assertEqual(res.returncode, 0, f"Fehler: {res.stderr}")
+
+        state = (self.state_dir / "active-state").read_text().strip()
+        self.assertEqual(
+            state,
+            "lan|wlan0|192.168.2.0/24,lan|wlan0|2003:df:df42:c870::/64,"
+            "lan|wlan0|fd00:1234::/64,lan|wlan0|fe80::/10|v6|80|8092",
+        )
+        ufw_log = ufw_calls.read_text()
+        for source in ("192.168.2.0/24", "2003:df:df42:c870::/64", "fd00:1234::/64", "fe80::/10"):
+            self.assertIn(f"allow in on wlan0 from {source} to any port 80 proto tcp", ufw_log)
+            self.assertIn(f"allow in on wlan0 from {source} to any port 5353 proto udp", ufw_log)
+        # Über einen Router erreichbare Netze, Einzeladressen und die Default-Route nicht
+        self.assertNotIn("2003:df::/32", ufw_log)
+        self.assertNotIn("c870::42", ufw_log)
+        self.assertNotIn("from default", ufw_log)
+        # Avahi: Anschluss nur einmal
+        avahi = (Path(self.temp_dir.name) / "default_avahi.conf").read_text()
+        self.assertIn("allow-interfaces=wlan0\n", avahi)
+
+    def test_new_ipv6_prefix_updates_rules(self):
+        """Neues IPv6-Präfix vom Router: Beim nächsten Lauf werden die Regeln erneuert."""
+        script_path = self._prepare_testable_sync_script()
+        (Path(self.temp_dir.name) / "ufw_defaults").write_text('IPV6="yes"\n')
+        ufw_calls = Path(self.temp_dir.name) / "ufw_calls.log"
+        prefix_file = Path(self.temp_dir.name) / "routes6"
+        prefix_file.write_text("2003:df:df42:c820::/64 proto ra metric 600\n")
+        self._ipv6_lan_mocks(prefix_file, ufw_calls)
+
+        env = os.environ.copy()
+        env["PATH"] = f"{self.bin_dir}:{env['PATH']}"
+        res = subprocess.run([str(script_path)], env=env, capture_output=True, text=True)
+        self.assertEqual(res.returncode, 0, f"Fehler: {res.stderr}")
+        self.assertIn("from 2003:df:df42:c820::/64", ufw_calls.read_text())
+
+        # Unverändert: keine ufw-Aufrufe
+        ufw_calls.unlink()
+        subprocess.run([str(script_path)], env=env, capture_output=True, text=True)
+        self.assertFalse(ufw_calls.exists())
+
+        # Präfixwechsel
+        prefix_file.write_text("2003:df:df42:c870::/64 proto ra metric 600\n")
+        res = subprocess.run([str(script_path)], env=env, capture_output=True, text=True)
+        self.assertEqual(res.returncode, 0, f"Fehler: {res.stderr}")
+        ufw_log = ufw_calls.read_text()
+        self.assertIn("from 2003:df:df42:c870::/64", ufw_log)
+        self.assertNotIn("from 2003:df:df42:c820::/64", ufw_log)
+        self.assertIn("2003:df:df42:c870::/64", (self.state_dir / "active-state").read_text())
+
+    def test_no_ipv6_rules_when_ufw_ignores_ipv6(self):
+        """Mit IPV6=no in ufw gibt es keine IPv6-Regeln (ufw würde sie ablehnen)."""
+        script_path = self._prepare_testable_sync_script()
+        ufw_calls = Path(self.temp_dir.name) / "ufw_calls.log"
+        prefix_file = Path(self.temp_dir.name) / "routes6"
+        prefix_file.write_text("2003:df:df42:c870::/64 proto ra metric 600\n")
+        self._ipv6_lan_mocks(prefix_file, ufw_calls)
+
+        env = os.environ.copy()
+        env["PATH"] = f"{self.bin_dir}:{env['PATH']}"
+        res = subprocess.run([str(script_path)], env=env, capture_output=True, text=True)
+        self.assertEqual(res.returncode, 0, f"Fehler: {res.stderr}")
+        ufw_log = ufw_calls.read_text()
+        self.assertNotIn("2003:", ufw_log)
+        self.assertNotIn("fe80", ufw_log)
 
 
 if __name__ == "__main__":

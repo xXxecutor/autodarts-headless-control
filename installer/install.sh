@@ -239,7 +239,7 @@ install_generic() {
 uninstall_generic() {
     [[ -f "${MANIFEST}" ]] || fail "Keine Installation gefunden (${MANIFEST} fehlt)."
     systemctl disable --now autodarts-headless-control.service autodarts-update.timer \
-        autodarts-headless-control-update.timer 2>/dev/null || true
+        autodarts-headless-control-update.timer autodarts-firewall-sync.timer 2>/dev/null || true
     while IFS= read -r file; do
         [[ -n "${file}" ]] && rm -f "${file}"
     done < "${MANIFEST}"
