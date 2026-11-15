@@ -148,8 +148,13 @@ find_lans() {
     )
 }
 
-# Passt allow-interfaces in /etc/avahi/avahi-daemon.conf gezielt an,
-# sichert vor der ersten Änderung das Original und vermeidet blindes Überschreiben.
+# Passt /etc/avahi/avahi-daemon.conf gezielt an, sichert vor der ersten
+# Änderung das Original und vermeidet blindes Überschreiben:
+# - allow-interfaces: nur die aktuell freigegebenen Anschlüsse
+# - keine IPv6-Adressen veröffentlichen: Die Firewall gibt die Weboberfläche
+#   nur für das IPv4-Netz frei (IPv6-Präfixe wechseln beim Anbieter ständig).
+#   Würde autodarts.local auch eine IPv6-Adresse melden, liefen Geräte, die
+#   IPv6 bevorzugen, zuerst in die Sperre und wichen erst verzögert auf IPv4 aus.
 sync_avahi_interface() {
     local target_iface="$1"
     local conf="/etc/avahi/avahi-daemon.conf"
@@ -163,46 +168,67 @@ sync_avahi_interface() {
 
     local ret=0
     python3 - "$conf" "$target_iface" <<'PY' || ret=$?
+import os
 import sys
 import tempfile
-import os
 
 conf_path = sys.argv[1]
 target_iface = sys.argv[2]
 
+# Gewünschte Werte je Abschnitt
+desired = {
+    "server": {"allow-interfaces": target_iface, "use-ipv6": "no"},
+    "publish": {"publish-aaaa-on-ipv4": "no"},
+}
+
 with open(conf_path, "r", encoding="utf-8") as f:
     lines = f.readlines()
+if lines and not lines[-1].endswith("\n"):
+    lines[-1] += "\n"
 
 new_lines = []
-in_server = False
-found_key = False
-modified = False
+section = None
+done = {name: set() for name in desired}
+
+
+def flush_missing(name):
+    """Fehlende Schlüssel am Ende des Abschnitts ergänzen."""
+    if name not in desired:
+        return
+    for key, value in desired[name].items():
+        if key not in done[name]:
+            new_lines.append(f"{key}={value}\n")
+            done[name].add(key)
+
 
 for line in lines:
     stripped = line.strip()
     if stripped.startswith("[") and stripped.endswith("]"):
-        if in_server and not found_key:
-            new_lines.append(f"allow-interfaces={target_iface}\n")
-            found_key = True
-            modified = True
-        in_server = (stripped.lower() == "[server]")
+        flush_missing(section)
+        section = stripped[1:-1].strip().lower()
         new_lines.append(line)
         continue
 
-    if in_server and (stripped.startswith("allow-interfaces=") or stripped.startswith("#allow-interfaces=")):
-        new_line = f"allow-interfaces={target_iface}\n"
-        if line != new_line:
-            modified = True
-        new_lines.append(new_line)
-        found_key = True
-    else:
-        new_lines.append(line)
+    if section in desired:
+        key = stripped.lstrip("#").split("=", 1)[0].strip()
+        if "=" in stripped and key in desired[section]:
+            if key in done[section]:
+                # Doppelte Einträge entfernen (auskommentierte bleiben stehen)
+                if stripped.startswith("#"):
+                    new_lines.append(line)
+                continue
+            new_lines.append(f"{key}={desired[section][key]}\n")
+            done[section].add(key)
+            continue
+    new_lines.append(line)
 
-if in_server and not found_key:
-    new_lines.append(f"allow-interfaces={target_iface}\n")
-    modified = True
+flush_missing(section)
+for name in desired:
+    if not done[name]:
+        new_lines.append(f"\n[{name}]\n")
+        flush_missing(name)
 
-if modified:
+if new_lines != lines:
     dir_name = os.path.dirname(conf_path)
     with tempfile.NamedTemporaryFile("w", dir=dir_name, delete=False, encoding="utf-8") as tf:
         tf.writelines(new_lines)
@@ -215,7 +241,7 @@ if modified:
 sys.exit(0)
 PY
     if [[ $ret -eq 10 ]]; then
-        log "Avahi-Interface aktualisiert: allow-interfaces=$target_iface"
+        log "Avahi-Konfiguration aktualisiert: allow-interfaces=$target_iface, nur IPv4"
         if command -v systemctl >/dev/null 2>&1; then
             systemctl try-restart avahi-daemon >/dev/null 2>&1 || true
         fi
@@ -234,9 +260,10 @@ while IFS= read -r lan; do
     [[ -n "$lan" && "${lan%%|*}" != "$hotspot_iface" ]] && entries+=("lan|$lan")
 done < <(find_lans)
 
-# Regelsatz-Version im Zustand: Ändern sich die Regeln (z. B. neuer Port),
-# werden bestehende Installationen beim nächsten Lauf automatisch aktualisiert.
-RULESET_VERSION="4"
+# Regelsatz-Version im Zustand: Ändern sich die Regeln oder die Avahi-
+# Einstellungen (z. B. neuer Port, v5: nur IPv4 veröffentlichen), werden
+# bestehende Installationen beim nächsten Lauf automatisch aktualisiert.
+RULESET_VERSION="5"
 if [[ ${#entries[@]} -gt 0 ]]; then
     entries_state="$(IFS=,; echo "${entries[*]}")"
 else

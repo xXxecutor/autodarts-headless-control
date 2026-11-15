@@ -143,7 +143,7 @@ fi
         # Prüfen, ob State-File geschrieben wurde
         state_file = self.state_dir / "active-state"
         self.assertTrue(state_file.exists())
-        self.assertEqual(state_file.read_text().strip(), "hotspot|wlan0|192.168.4.0/24|v4|80|8092")
+        self.assertEqual(state_file.read_text().strip(), "hotspot|wlan0|192.168.4.0/24|v5|80|8092")
 
         # Prüfen, ob UFW Hotspot-Regeln aufgerufen wurden
         ufw_log = ufw_calls.read_text()
@@ -197,7 +197,7 @@ fi
 
         state_file = self.state_dir / "active-state"
         self.assertTrue(state_file.exists())
-        self.assertEqual(state_file.read_text().strip(), "lan|wlan0|192.168.2.0/24|v4|80|8092")
+        self.assertEqual(state_file.read_text().strip(), "lan|wlan0|192.168.2.0/24|v5|80|8092")
 
         ufw_log = ufw_calls.read_text()
         self.assertIn("Autodarts HTTP LAN", ufw_log)
@@ -254,7 +254,7 @@ fi
         state = (self.state_dir / "active-state").read_text().strip()
         self.assertEqual(
             state,
-            "lan|wlan0|192.168.2.0/24,lan|enp1s0|192.168.2.0/24|v4|80|8092",
+            "lan|wlan0|192.168.2.0/24,lan|enp1s0|192.168.2.0/24|v5|80|8092",
         )
         ufw_log = ufw_calls.read_text()
         self.assertIn("allow in on wlan0 from 192.168.2.0/24 to any port 80 proto tcp", ufw_log)
@@ -319,6 +319,58 @@ fi
         self.assertIn("publish-workstation=yes", updated)
         self.assertIn("use-ipv4=yes", updated)
         self.assertIn("ratelimit-interval-usec=1000000", updated)
+        # Keine IPv6-Adressen veröffentlichen (Firewall gibt nur IPv4 frei)
+        self.assertIn("use-ipv6=no", updated)
+        self.assertNotIn("use-ipv6=yes", updated)
+        self.assertIn("publish-aaaa-on-ipv4=no", updated)
+        # Werte stehen im richtigen Abschnitt
+        server, publish = updated.split("[publish]")
+        self.assertIn("use-ipv6=no", server)
+        self.assertIn("publish-aaaa-on-ipv4=no", publish)
+
+        # 2. Erneut ausführen (Zustand löschen): keine weitere Änderung
+        state_file = Path(self.state_dir) / "active-state"
+        self.assertTrue(state_file.exists())
+        state_file.unlink()
+        res = subprocess.run([str(script_path)], env=env, capture_output=True, text=True)
+        self.assertEqual(res.returncode, 0, f"Fehler: {res.stderr}")
+        self.assertEqual(avahi_conf.read_text(), updated)
+
+    def test_avahi_missing_sections_are_added(self):
+        """Fehlt der [publish]-Abschnitt, wird er mit der IPv4-Einstellung ergänzt."""
+        script_path = self._prepare_testable_sync_script()
+        avahi_conf = Path(self.temp_dir.name) / "default_avahi.conf"
+        avahi_conf.write_text("[server]\nuse-ipv6=yes\n#use-ipv6=yes")
+
+        self._create_mock("nmcli", """
+if [[ "$*" == *"-t -f DEVICE,TYPE,STATE device status"* ]]; then
+    echo "wlan0:wifi:connected"
+elif [[ "$*" == *"-g GENERAL.CONNECTION device show wlan0"* ]]; then
+    echo "HomeLAN"
+elif [[ "$*" == *"-g GENERAL.TYPE device show wlan0"* ]]; then
+    echo "wifi"
+fi
+""")
+        self._create_mock("ip", """
+if [[ "$*" == *"-o -4 addr show dev wlan0 scope global"* ]]; then
+    echo "2: wlan0    inet 192.168.2.129/24 brd 192.168.2.255 scope global wlan0"
+elif [[ "$*" == *"-4 route show default"* ]]; then
+    echo "default via 192.168.2.1 dev wlan0"
+fi
+""")
+        self._create_mock("ufw", 'echo "UFW" >> /dev/null')
+        self._create_mock("logger", 'echo "LOG: $*" >> "' + str(self.mock_log) + '"')
+
+        env = os.environ.copy()
+        env["PATH"] = f"{self.bin_dir}:{env['PATH']}"
+        res = subprocess.run([str(script_path)], env=env, capture_output=True, text=True)
+        self.assertEqual(res.returncode, 0, f"Fehler: {res.stderr}")
+
+        self.assertEqual(
+            avahi_conf.read_text(),
+            "[server]\nuse-ipv6=no\n#use-ipv6=yes\nallow-interfaces=wlan0\n"
+            "\n[publish]\npublish-aaaa-on-ipv4=no\n",
+        )
 
 
 if __name__ == "__main__":
