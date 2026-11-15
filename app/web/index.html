@@ -101,20 +101,22 @@
 .banner strong { color: #fcd34d; }
 .banner .banner-cta { margin-left: auto; font-weight: 600; white-space: nowrap; }
 
-/* Seitenraster: breit zwei Spalten (Board | Gerät), schmal untereinander */
+/* Seitenraster: breit zwei Spalten (Board | Gerät), schmal untereinander.
+   Schmal als Spalte statt Raster: Ausgeblendete Hinweise belegen so keine
+   leere Zeile, und der Abstand bleibt überall gleich. */
 .layout {
-    display: grid;
+    display: flex;
+    flex-direction: column;
     gap: 20px;
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "board" "notes" "steps";
 }
 
 .area-board  { grid-area: board; }
-.area-notes  { grid-area: notes; }
-.area-steps  { grid-area: steps; }
+.area-notes  { grid-area: notes; order: 1; }
+.area-steps  { grid-area: steps; order: 2; }
 
 @media (min-width: 880px) {
     .layout {
+        display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         grid-template-areas: "board steps" "notes notes";
     }
@@ -402,6 +404,8 @@
 @media (max-width: 720px) {
     /* 1fr: alle Zeilen so hoch wie die höchste, auch wenn Text umbricht */
     .rows { gap: 10px; grid-auto-rows: minmax(64px, 1fr); }
+    /* Gleicher Abstand wie zwischen Statusleiste und erster Karte */
+    .layout { gap: 16px; }
 }
 
 @media (max-width: 560px) {
@@ -531,7 +535,7 @@
         <ol class="steps rows">
             <li><strong>Board-Manager öffnen</strong>Über „Board einrichten“ – öffnet sich in einem neuen Tab.</li>
             <li><strong>Anmelden &amp; kalibrieren</strong>Board mit deinem Autodarts-Konto verbinden, Kameras zuordnen und konfigurieren.</li>
-            <li><strong>Loslegen</strong>„Jetzt spielen“ für Matches auf play.autodarts.com – oder „Mini-Spiele“ für Memory, Schiffe versenken, Vier gewinnt, Tic Tac Toe &amp; Co. mit deinem Board.</li>
+            <li><strong>Loslegen</strong>„Jetzt spielen“ für Matches auf play.autodarts.com – oder „Mini-Spiele“ für Memory, Vier gewinnt &amp; Co. mit deinem Board.</li>
         </ol>
     </section>
 
