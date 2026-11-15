@@ -1,6 +1,8 @@
 import asyncio
+import ipaddress
 import json
 import logging
+import socket
 import subprocess
 import threading
 import os
@@ -28,7 +30,6 @@ from app.services.network_watchdog import NetworkWatchdog
 from app.services.request_origin import is_same_origin
 
 
-HOST = "0.0.0.0"
 PORT = int(os.environ.get("HEADLESS_HTTP_PORT", "80"))
 WEB_ROOT = Path(__file__).resolve().parent / "web"
 HOTSPOT_SUBNET_PREFIX = "192.168.4."
@@ -88,6 +89,32 @@ def _serialize_networks(networks):
     ]
 
 
+class DualStackHTTPServer(ThreadingHTTPServer):
+    """Ein Socket für IPv4 und IPv6.
+
+    autodarts.local meldet auch die IPv6-Adresse der Box. Lauscht der Server
+    nur auf IPv4, weist die Box IPv6-Verbindungen ab, und Windows versucht es
+    rund zwei Sekunden lang erneut, bevor es auf IPv4 ausweicht.
+    """
+
+    address_family = socket.AF_INET6
+
+    def server_bind(self):
+        # IPv4-Clients kommen als ::ffff:a.b.c.d über denselben Socket.
+        self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+        super().server_bind()
+
+
+def create_http_server(port: int, handler) -> ThreadingHTTPServer:
+    """Dual-Stack-Server; ohne IPv6 (z. B. ipv6.disable=1) nur IPv4."""
+    if socket.has_ipv6:
+        try:
+            return DualStackHTTPServer(("::", port), handler)
+        except OSError as exc:
+            logger.warning("IPv6 nicht verfügbar (%s), Weboberfläche nur über IPv4", exc)
+    return ThreadingHTTPServer(("0.0.0.0", port), handler)
+
+
 class RequestHandler(BaseHTTPRequestHandler):
 
     def log_message(self, format: str, *args) -> None:
@@ -95,6 +122,9 @@ class RequestHandler(BaseHTTPRequestHandler):
         # Wir unterdrücken das redundante Common-Log-Datum und loggen schlank ohne nachgestellten Bindestrich.
         msg = (format % args).rstrip(" -")
         sys.stderr.write("%s - %s\n" % (self.address_string(), msg))
+
+    def address_string(self) -> str:
+        return self._client_ip()
 
     # ------------------------------------------------------------------
     # Hilfsfunktionen
@@ -104,12 +134,25 @@ class RequestHandler(BaseHTTPRequestHandler):
     def route(self) -> str:
         return urllib.parse.urlsplit(self.path).path or "/"
 
-    def _note_client(self) -> None:
+    def _client_ip(self) -> str:
+        """Adresse des Clients; IPv4 über den Dual-Stack-Socket (::ffff:a.b.c.d) als a.b.c.d."""
         try:
-            if self.client_address[0].startswith(HOTSPOT_SUBNET_PREFIX):
-                _network_watchdog.note_client_activity()
+            raw = str(self.client_address[0])
         except (AttributeError, IndexError, TypeError):
-            pass
+            return ""
+        try:
+            addr = ipaddress.ip_address(raw.split("%", 1)[0])
+        except ValueError:
+            return raw
+        mapped = getattr(addr, "ipv4_mapped", None)
+        return str(mapped or addr)
+
+    def _from_hotspot(self) -> bool:
+        return self._client_ip().startswith(HOTSPOT_SUBNET_PREFIX)
+
+    def _note_client(self) -> None:
+        if self._from_hotspot():
+            _network_watchdog.note_client_activity()
 
     def _cors_headers(self) -> None:
         if self.route in CORS_PATHS:
@@ -171,11 +214,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         oder captive.apple.com. Im Hotspot löst DNS alles auf die Box auf; eine
         Umleitung lässt das Handy die Einrichtungsseite von selbst öffnen.
         """
-        try:
-            client = self.client_address[0]
-        except (AttributeError, IndexError, TypeError):
-            return False
-        if not str(client).startswith(HOTSPOT_SUBNET_PREFIX):
+        if not self._from_hotspot():
             return False
         host = (self.headers.get("Host") or "").strip().lower()
         if host.startswith("["):
@@ -209,11 +248,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         if route == "/health":
             # via_hotspot: Im Hotspot zeigt autodarts.local auf die Box selbst.
             # Die Startseite darf das nicht als "im Heimnetz erreichbar" werten.
-            try:
-                via_hotspot = str(self.client_address[0]).startswith(HOTSPOT_SUBNET_PREFIX)
-            except (AttributeError, IndexError, TypeError):
-                via_hotspot = False
-            self._json_response({"status": "ok", "via_hotspot": via_hotspot})
+            self._json_response({"status": "ok", "via_hotspot": self._from_hotspot()})
             return
 
         if route == "/api/system":
@@ -556,15 +591,10 @@ def main():
     if platform.system() == "Linux" and os.environ.get("HEADLESS_AUTODARTS_AUTOSTART", "1") != "0":
         threading.Thread(target=_setup_autodarts_autostart, daemon=True, name="autodarts-autostart").start()
 
-    server = ThreadingHTTPServer(
-        (HOST, PORT),
-        RequestHandler,
-    )
+    server = create_http_server(PORT, RequestHandler)
 
-    print(
-        f"Headless Control läuft auf "
-        f"http://{HOST}:{PORT}"
-    )
+    host = "[::]" if server.address_family == socket.AF_INET6 else "0.0.0.0"
+    print(f"Headless Control läuft auf http://{host}:{PORT}")
 
     try:
         server.serve_forever()

@@ -12,7 +12,8 @@ from app.services.request_origin import is_same_origin
 from app.services.terminal import TerminalService
 
 
-HOST = "0.0.0.0"
+# None: alle Adressen, IPv4 und IPv6 (autodarts.local meldet auch IPv6)
+HOST = None
 PORT = int(os.environ.get("HEADLESS_WS_PORT", "8092"))
 INITIAL_SIZE_TIMEOUT = 2.0
 # Ein funktionierender TUI-Start zeichnet nach ~0,1 s; hängende Starts nie.
@@ -200,7 +201,7 @@ async def terminal(websocket):
 
 async def websocket_server():
     async with serve(terminal, HOST, PORT, process_request=check_origin):
-        print(f"Terminal-WebSocket listening on {HOST}:{PORT}")
+        print(f"Terminal-WebSocket listening on port {PORT} (IPv4 und IPv6)")
         await asyncio.Future()
 
 

@@ -228,6 +228,31 @@ class TestMainEndpoints(unittest.TestCase):
         handler.do_GET()
         self.assertFalse(json.loads(handler.wfile.getvalue())["via_hotspot"])
 
+    def test_ipv4_clients_via_dual_stack_socket_are_recognized(self):
+        # Über den IPv4/IPv6-Socket kommen IPv4-Clients als ::ffff:a.b.c.d.
+        handler = self._handler("GET", "/health", {"Host": "autodarts.local"})
+        handler.client_address = ("::ffff:192.168.4.23", 40000, 0, 0)
+        self.assertEqual(handler._client_ip(), "192.168.4.23")
+        self.assertEqual(handler.address_string(), "192.168.4.23")
+        handler.do_GET()
+        self.assertTrue(json.loads(handler.wfile.getvalue())["via_hotspot"])
+
+        handler = self._handler("GET", "/generate_204", {"Host": "connectivitycheck.gstatic.com"})
+        handler.client_address = ("::ffff:192.168.4.23", 40000, 0, 0)
+        handler.do_GET()
+        self.assertEqual(handler.status, 302)
+
+        # Echte IPv6-Clients aus dem Heimnetz: nie Hotspot
+        handler = self._handler("GET", "/health", {"Host": "autodarts.local"})
+        handler.client_address = ("2003:df:df42:c870::29", 40000, 0, 0)
+        self.assertEqual(handler.address_string(), "2003:df:df42:c870::29")
+        handler.do_GET()
+        self.assertFalse(json.loads(handler.wfile.getvalue())["via_hotspot"])
+
+        handler = self._handler("GET", "/health", {"Host": "autodarts.local"})
+        handler.client_address = ("fe80::1%wlan0", 40000, 0, 2)
+        self.assertEqual(handler._client_ip(), "fe80::1")
+
     def test_own_names_and_lan_clients_are_not_redirected(self):
         handler = self._handler("GET", "/admin", {"Host": "192.168.4.1"})
         handler.client_address = ("192.168.4.23", 40000)
@@ -296,6 +321,65 @@ class TestAutostartEndpoint(unittest.TestCase):
         handler.do_GET()
         self.assertEqual(handler.status, 200)
         self.assertIn(b"--surface", handler.wfile.getvalue())
+
+
+class TestDualStackServer(unittest.TestCase):
+    """Die Weboberfläche ist über IPv4 und IPv6 erreichbar."""
+
+    def _serve(self):
+        import threading
+        from http.server import BaseHTTPRequestHandler
+
+        from app.main import create_http_server
+
+        class Ping(BaseHTTPRequestHandler):
+            def do_GET(self):
+                body = str(self.client_address[0]).encode()
+                self.send_response(200)
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *args):
+                pass
+
+        server = create_http_server(0, Ping)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        return server
+
+    def _get(self, host, port):
+        import http.client
+
+        conn = http.client.HTTPConnection(host, port, timeout=5)
+        try:
+            conn.request("GET", "/")
+            return conn.getresponse().read().decode()
+        finally:
+            conn.close()
+
+    def test_ipv4_and_ipv6_on_one_port(self):
+        import socket
+
+        if not socket.has_ipv6:
+            self.skipTest("Kein IPv6 auf diesem System")
+        server = self._serve()
+        if server.address_family != socket.AF_INET6:
+            self.skipTest("IPv6 auf diesem System abgeschaltet")
+        port = server.server_address[1]
+        self.assertIn("127.0.0.1", self._get("127.0.0.1", port))
+        self.assertEqual(self._get("::1", port), "::1")
+
+    def test_falls_back_to_ipv4_without_ipv6(self):
+        import socket
+
+        from app import main
+
+        with patch.object(main.DualStackHTTPServer, "__init__", side_effect=OSError("ipv6 disabled")):
+            server = self._serve()
+        self.assertEqual(server.address_family, socket.AF_INET)
+        self.assertEqual(self._get("127.0.0.1", server.server_address[1]), "127.0.0.1")
 
 
 if __name__ == "__main__":

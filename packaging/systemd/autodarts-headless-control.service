@@ -42,6 +42,13 @@ IPAddressAllow=localhost
 IPAddressAllow=192.168.0.0/16
 IPAddressAllow=10.0.0.0/8
 IPAddressAllow=172.16.0.0/12
+# IPv6: Link-Local, ULA und globale Adressen. Das globale Präfix des
+# Heimnetzes vergibt der Router und wechselt es beim Anbieter oft täglich;
+# die Eingrenzung auf das Heimnetz übernimmt deshalb die Firewall
+# (autodarts-firewall-sync gibt nur die Präfixe des eigenen Anschlusses frei).
+IPAddressAllow=fe80::/10
+IPAddressAllow=fc00::/7
+IPAddressAllow=2000::/3
 
 [Install]
 WantedBy=multi-user.target
