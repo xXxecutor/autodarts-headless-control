@@ -1095,9 +1095,9 @@ async function loadAutodartsInfo() {
         service.textContent = enabled
             ? (svc.active === 'active' ? 'Aktiv' : 'Eingerichtet (' + (svc.active || 'unbekannt') + ')')
             : 'Nicht eingerichtet';
-        bm.textContent = status.board_manager_reachable
-            ? 'Erreichbar (Port ' + status.board_manager_port + ')'
-            : 'Nicht erreichbar';
+        // Kurz halten, damit die Kachel am Handy nicht umbricht; Port als Tooltip.
+        bm.textContent = status.board_manager_reachable ? 'Erreichbar' : 'Nicht erreichbar';
+        bm.title = status.board_manager_port ? 'Port ' + status.board_manager_port : '';
         // Der Knopf wird nur gebraucht, wenn der Autostart fehlt.
         notice.style.display = enabled ? 'none' : 'flex';
     } catch (error) {
