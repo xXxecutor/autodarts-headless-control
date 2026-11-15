@@ -70,6 +70,26 @@
     overflow-wrap: break-word;
 }
 
+/* Kachel als Link (z. B. Terminal-Fallback) */
+a.stat-link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+    transition: border-color 0.15s, background 0.15s;
+}
+a.stat-link:hover,
+a.stat-link:focus-visible {
+    border-color: rgba(56, 189, 248, 0.5);
+    background: rgba(56, 189, 248, 0.08);
+}
+.stat-link .stat-value {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #7dd3fc;
+}
+.stat-link .stat-value .icon { width: 16px; height: 16px; flex-shrink: 0; }
+
 /* Statusplakette */
 .pill {
     display: inline-flex;
@@ -454,7 +474,7 @@
             <h2>Autodarts</h2>
             <p>Das Board wird im Board-Manager auf der Startseite eingerichtet. Die Terminal-Einrichtung ist nur ein Fallback für ältere Autodarts-Versionen ohne Board-Manager.</p>
         </div>
-        <div class="stats" style="--cols: 3;">
+        <div class="stats" style="--cols: 4;">
             <div class="stat">
                 <div class="stat-label">Version</div>
                 <div class="stat-value" id="adVersionValue">–</div>
@@ -467,6 +487,14 @@
                 <div class="stat-label">Board-Manager</div>
                 <div class="stat-value" id="adBoardManagerValue">–</div>
             </div>
+            <a class="stat stat-link" href="/terminal" target="_blank" rel="noopener"
+               title="Terminal-Einrichtung – Fallback für ältere Autodarts-Versionen ohne Board-Manager">
+                <div class="stat-label">Terminal (Fallback)</div>
+                <div class="stat-value">
+                    <svg class="icon" aria-hidden="true"><use href="#i-terminal"/></svg>
+                    Öffnen
+                </div>
+            </a>
         </div>
 
         <!-- Nur sichtbar, wenn der Autostart fehlt -->
@@ -481,11 +509,6 @@
                 </button>
             </div>
         </div>
-
-        <button type="button" class="btn btn-ghost btn-sm" style="margin-top:16px;" onclick="window.open('/terminal', '_blank')">
-            <svg class="icon" aria-hidden="true"><use href="#i-terminal"/></svg>
-            Terminal-Einrichtung öffnen (Fallback)
-        </button>
     </section>
 
     <!-- System -->
