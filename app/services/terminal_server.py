@@ -199,10 +199,25 @@ async def terminal(websocket):
         logger.info("Terminal session pid=%s closed", pid)
 
 
-async def websocket_server():
-    async with serve(terminal, HOST, PORT, process_request=check_origin):
+async def open_websocket_server():
+    """IPv4 und IPv6; ist IPv6 abgeschaltet (z. B. in Containern), nur IPv4."""
+    try:
+        server = await serve(terminal, HOST, PORT, process_request=check_origin)
         print(f"Terminal-WebSocket listening on port {PORT} (IPv4 und IPv6)")
+    except OSError as exc:
+        logger.warning("Terminal-WebSocket ohne IPv6 (%s)", exc)
+        server = await serve(terminal, "0.0.0.0", PORT, process_request=check_origin)
+        print(f"Terminal-WebSocket listening on 0.0.0.0:{PORT}")
+    return server
+
+
+async def websocket_server():
+    server = await open_websocket_server()
+    try:
         await asyncio.Future()
+    finally:
+        server.close()
+        await server.wait_closed()
 
 
 def start_terminal_server():

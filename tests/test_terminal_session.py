@@ -158,3 +158,54 @@ class TestInitialTerminalSize(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestWebSocketServerAddresses(unittest.TestCase):
+    """Der Terminal-WebSocket lauscht auf IPv4 und IPv6, ohne IPv6 nur auf IPv4."""
+
+    def _open(self, fail_all_addresses: bool):
+        import asyncio
+        from unittest.mock import patch
+
+        from app.services import terminal_server
+
+        calls = []
+
+        async def fake_serve(handler, host, port, **kwargs):
+            calls.append(host)
+            if host is None and fail_all_addresses:
+                raise OSError(99, "Cannot assign requested address")
+            return object()
+
+        with patch.object(terminal_server, "serve", fake_serve):
+            asyncio.run(terminal_server.open_websocket_server())
+        return calls
+
+    def test_listens_on_all_addresses(self):
+        self.assertEqual(self._open(fail_all_addresses=False), [None])
+
+    def test_falls_back_to_ipv4_without_ipv6(self):
+        self.assertEqual(self._open(fail_all_addresses=True), [None, "0.0.0.0"])
+
+    def test_real_server_accepts_ipv4(self):
+        import asyncio
+        import socket
+        from unittest.mock import patch
+
+        from app.services import terminal_server
+
+        async def run():
+            with socket.socket() as probe:
+                probe.bind(("127.0.0.1", 0))
+                port = probe.getsockname()[1]
+            with patch.object(terminal_server, "PORT", port):
+                server = await terminal_server.open_websocket_server()
+            try:
+                _reader, writer = await asyncio.open_connection("127.0.0.1", port)
+                writer.close()
+                await writer.wait_closed()
+            finally:
+                server.close()
+                await server.wait_closed()
+
+        asyncio.run(run())
